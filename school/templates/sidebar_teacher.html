@@ -1,0 +1,42 @@
+<div class="nav-item">
+    <a href="{% url 'enseignant_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_classes' %}" class="nav-link" id="sidebar-classes">
+        <i class="fas fa-chalkboard"></i>
+        Mes classes
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_subjects' %}" class="nav-link" id="sidebar-subjects">
+        <i class="fas fa-book"></i>
+        Mes matières
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'liste_cours_enseignant' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-calendar-alt"></i>
+        Mes cours
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_attendance_today' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-camera"></i>
+        Appels (Scan QR)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'historique_presences' %}" class="nav-link" id="sidebar-history">
+        <i class="fas fa-history"></i>
+        Historique des présences
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Déconnexion
+    </a>
+</div>

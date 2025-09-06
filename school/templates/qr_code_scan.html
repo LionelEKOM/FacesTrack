@@ -1,0 +1,643 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Scan QR Code - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'enseignant_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link active" id="sidebar-qr-scan">
+        <i class="fas fa-qrcode"></i>
+        Scan QR Code
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link" id="sidebar-classes">
+        <i class="fas fa-chalkboard"></i>
+        Mes classes
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link" id="sidebar-history">
+        <i class="fas fa-history"></i>
+        Historique des cours
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Session Data -->
+<div data-session-id="{{ session_appel.id }}" style="display: none;"></div>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Scan QR Code</h2>
+            <p class="text-muted mb-0">Prise de présence par QR Code pour {{ cours.matiere.nom }} - {{ cours.classe.nom
+                }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" id="startScan" onclick="startQRScan()">
+                <i class="fas fa-qrcode me-2"></i>Démarrer le scan
+            </button>
+            <button class="btn btn-primary" id="validateCall" onclick="validateCall()" disabled>
+                <i class="fas fa-check me-2"></i>Valider l'appel
+            </button>
+            <button class="btn btn-outline-secondary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Session Info -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Informations du Cours</h3>
+                <div class="card-icon primary">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <p><strong>Matière:</strong> {{ cours.matiere.nom }}</p>
+                <p><strong>Classe:</strong> {{ cours.classe.nom }}</p>
+                <p><strong>Date:</strong> {{ cours.date|date:"d/m/Y" }}</p>
+                <p><strong>Horaire:</strong> {{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}</p>
+                <p><strong>Total élèves:</strong> <span id="totalStudents">{{ eleves.count }}</span></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Statistiques en Temps Réel</h3>
+                <div class="card-icon accent">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="stat-item">
+                            <div class="stat-value text-success" id="presentCount">0</div>
+                            <div class="stat-label">Présents</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-item">
+                            <div class="stat-value text-warning" id="lateCount">0</div>
+                            <div class="stat-label">Retards</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-item">
+                            <div class="stat-value text-danger" id="absentCount">0</div>
+                            <div class="stat-label">Absents</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-success" id="attendanceProgress" role="progressbar" style="width: 0%">
+                    </div>
+                </div>
+                <p class="text-center mt-2 mb-0">
+                    <small class="text-muted">Taux de présence: <span id="attendanceRate">0%</span></small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Scanner Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Scanner QR Code</h3>
+                <div class="card-icon success">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div id="qrScannerContainer" class="text-center" style="display: none;">
+                    <div id="qrReader" class="mb-3"></div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Présentez le QR code de l'élève devant la caméra pour confirmer sa présence
+                    </div>
+                </div>
+                <div id="qrScannerPlaceholder" class="text-center">
+                    <div class="qr-placeholder">
+                        <i class="fas fa-qrcode fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Scanner QR Code</h4>
+                        <p class="text-muted">Cliquez sur "Démarrer le scan" pour commencer la prise de présence</p>
+                    </div>
+                </div>
+                <div id="scanStatus" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Derniers Scans</h3>
+                <div class="card-icon info">
+                    <i class="fas fa-history"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div id="recentScans" class="recent-scans">
+                    <p class="text-muted text-center">Aucun scan effectué</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des Élèves -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Liste des Élèves</h3>
+        <div class="card-icon warning">
+            <i class="fas fa-users"></i>
+        </div>
+    </div>
+    <div class="card-content">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>Nom</th>
+                        <th>Matricule</th>
+                        <th>Statut</th>
+                        <th>Heure d'arrivée</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsList">
+                    {% for eleve in eleves %}
+                    <tr data-eleve-id="{{ eleve.id }}" data-matricule="{{ eleve.matricule }}">
+                        <td>
+                            {% if eleve.photo_reference %}
+                            <img src="{{ eleve.photo_reference.url }}" alt="Photo de {{ eleve.user.get_full_name }}"
+                                class="student-photo" width="40" height="40">
+                            {% else %}
+                            <div class="student-photo-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ eleve.user.get_full_name }}</td>
+                        <td>
+                            <span class="matricule">{{ eleve.matricule }}</span>
+                            <button class="btn btn-sm btn-outline-primary ms-2"
+                                onclick="showQRCode('{{ eleve.matricule }}')">
+                                <i class="fas fa-qrcode"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary" id="status-{{ eleve.id }}">Absent</span>
+                        </td>
+                        <td id="arrival-{{ eleve.id }}">-</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-success" onclick="markPresent({{ eleve.id }})">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-warning" onclick="markLate({{ eleve.id }})">
+                                    <i class="fas fa-clock"></i>
+                                </button>
+                                <button class="btn btn-danger" onclick="markAbsent({{ eleve.id }})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">QR Code de l'Élève</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="qrCodeDisplay"></div>
+                <p class="mt-2 mb-0">
+                    <small class="text-muted">Matricule: <span id="modalMatricule"></span></small>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Présence Confirmée
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Erreur
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qr-placeholder {
+        padding: 3rem;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        background-color: #f8f9fa;
+    }
+
+    .student-photo {
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .student-photo-placeholder {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+
+    .recent-scans {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .scan-item {
+        padding: 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .scan-item:last-child {
+        border-bottom: none;
+    }
+
+    .scan-success {
+        color: #198754;
+    }
+
+    .scan-error {
+        color: #dc3545;
+    }
+
+    #qrReader {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    #qrReader video {
+        width: 100%;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+    let html5QrcodeScanner = null;
+    let isScanning = false;
+    let sessionId = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        sessionId = document.querySelector('[data-session-id]').dataset.sessionId;
+        updateAttendanceStats();
+    });
+
+    function startQRScan() {
+        if (isScanning) return;
+
+        const container = document.getElementById('qrScannerContainer');
+        const placeholder = document.getElementById('qrScannerPlaceholder');
+        const startBtn = document.getElementById('startScan');
+
+        container.style.display = 'block';
+        placeholder.style.display = 'none';
+        startBtn.innerHTML = '<i class="fas fa-stop me-2"></i>Arrêter le scan';
+        startBtn.className = 'btn btn-danger';
+        startBtn.onclick = stopQRScan;
+
+        isScanning = true;
+
+        // Initialiser le scanner QR
+        html5QrcodeScanner = new Html5QrcodeScanner(
+            "qrReader",
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            false
+        );
+
+        html5QrcodeScanner.render(onScanSuccess, onScanError);
+    }
+
+    function stopQRScan() {
+        if (!isScanning) return;
+
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear();
+            html5QrcodeScanner = null;
+        }
+
+        const container = document.getElementById('qrScannerContainer');
+        const placeholder = document.getElementById('qrScannerPlaceholder');
+        const startBtn = document.getElementById('startScan');
+
+        container.style.display = 'none';
+        placeholder.style.display = 'block';
+        startBtn.innerHTML = '<i class="fas fa-qrcode me-2"></i>Démarrer le scan';
+        startBtn.className = 'btn btn-success';
+        startBtn.onclick = startQRScan;
+
+        isScanning = false;
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Arrêter le scan temporairement
+        stopQRScan();
+
+        // Traiter le QR code scanné
+        processQRCode(decodedText);
+
+        // Redémarrer le scan après un délai
+        setTimeout(() => {
+            if (!isScanning) {
+                startQRScan();
+            }
+        }, 2000);
+    }
+
+    function onScanError(error) {
+        // Erreur de scan - continuer
+        console.log('Erreur de scan:', error);
+    }
+
+    function processQRCode(qrData) {
+        fetch('/api/qr-code-scan/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                session_id: sessionId,
+                qr_code_data: qrData
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Succès
+                    showSuccessModal(data.message);
+                    addRecentScan(data.eleve.name, 'success');
+                    updateStudentStatus(data.eleve.id, 'PRESENT');
+                    updateAttendanceStats();
+                } else {
+                    // Erreur
+                    showErrorModal(data.error || 'Erreur lors du scan');
+                    addRecentScan(qrData, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showErrorModal('Erreur de connexion');
+                addRecentScan(qrData, 'error');
+            });
+    }
+
+    function showSuccessModal(message) {
+        document.getElementById('successMessage').textContent = message;
+        new bootstrap.Modal(document.getElementById('successModal')).show();
+    }
+
+    function showErrorModal(message) {
+        document.getElementById('errorMessage').textContent = message;
+        new bootstrap.Modal(document.getElementById('errorModal')).show();
+    }
+
+    function addRecentScan(data, type) {
+        const container = document.getElementById('recentScans');
+        const scanItem = document.createElement('div');
+        scanItem.className = `scan-item scan-${type}`;
+
+        const now = new Date();
+        const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        scanItem.innerHTML = `
+        <span>${type === 'success' ? data : 'QR invalide'}</span>
+        <small>${time}</small>
+    `;
+
+        // Ajouter au début
+        if (container.firstChild && container.firstChild.textContent.includes('Aucun scan')) {
+            container.innerHTML = '';
+        }
+        container.insertBefore(scanItem, container.firstChild);
+
+        // Limiter à 10 scans récents
+        const scans = container.querySelectorAll('.scan-item');
+        if (scans.length > 10) {
+            scans[scans.length - 1].remove();
+        }
+    }
+
+    function updateStudentStatus(eleveId, status) {
+        const statusElement = document.getElementById(`status-${eleveId}`);
+        const row = statusElement.closest('tr');
+
+        // Mettre à jour le badge de statut
+        statusElement.className = `badge ${getStatusBadgeClass(status)}`;
+        statusElement.textContent = getStatusText(status);
+
+        // Mettre à jour l'heure d'arrivée
+        const arrivalElement = document.getElementById(`arrival-${eleveId}`);
+        if (status === 'PRESENT' || status === 'RETARD') {
+            arrivalElement.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            arrivalElement.textContent = '-';
+        }
+
+        // Mettre à jour la ligne
+        row.className = getRowClass(status);
+    }
+
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'PRESENT': return 'bg-success';
+            case 'RETARD': return 'bg-warning';
+            case 'ABSENT': return 'bg-danger';
+            case 'JUSTIFIE': return 'bg-info';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getStatusText(status) {
+        switch (status) {
+            case 'PRESENT': return 'Présent';
+            case 'RETARD': return 'Retard';
+            case 'ABSENT': return 'Absent';
+            case 'JUSTIFIE': return 'Justifié';
+            default: return 'Inconnu';
+        }
+    }
+
+    function getRowClass(status) {
+        switch (status) {
+            case 'PRESENT': return 'table-success';
+            case 'RETARD': return 'table-warning';
+            case 'ABSENT': return 'table-danger';
+            case 'JUSTIFIE': return 'table-info';
+            default: return '';
+        }
+    }
+
+    function updateAttendanceStats() {
+        const presentCount = document.querySelectorAll('.badge.bg-success').length;
+        const lateCount = document.querySelectorAll('.badge.bg-warning').length;
+        const absentCount = document.querySelectorAll('.badge.bg-danger').length;
+        const total = presentCount + lateCount + absentCount;
+
+        document.getElementById('presentCount').textContent = presentCount;
+        document.getElementById('lateCount').textContent = lateCount;
+        document.getElementById('absentCount').textContent = absentCount;
+
+        const rate = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+        document.getElementById('attendanceRate').textContent = rate + '%';
+        document.getElementById('attendanceProgress').style.width = rate + '%';
+
+        // Activer le bouton de validation si tous les élèves sont présents
+        const validateBtn = document.getElementById('validateCall');
+        validateBtn.disabled = (presentCount + lateCount) === 0;
+    }
+
+    function markPresent(eleveId) {
+        updateStudentStatus(eleveId, 'PRESENT');
+        updateAttendanceStats();
+    }
+
+    function markLate(eleveId) {
+        updateStudentStatus(eleveId, 'RETARD');
+        updateAttendanceStats();
+    }
+
+    function markAbsent(eleveId) {
+        updateStudentStatus(eleveId, 'ABSENT');
+        updateAttendanceStats();
+    }
+
+    function showQRCode(matricule) {
+        document.getElementById('modalMatricule').textContent = matricule;
+
+        // Générer le QR code
+        const qrDisplay = document.getElementById('qrCodeDisplay');
+        qrDisplay.innerHTML = `<img src="data:image/png;base64,${generateQRCode(matricule)}" alt="QR Code" class="img-fluid">`;
+
+        new bootstrap.Modal(document.getElementById('qrCodeModal')).show();
+    }
+
+    function generateQRCode(data) {
+        // Utiliser une bibliothèque simple pour générer le QR code
+        // Pour l'instant, on affiche juste le matricule
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 200;
+        canvas.height = 200;
+
+        // Fond blanc
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 200, 200);
+
+        // Texte du matricule
+        ctx.fillStyle = 'black';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(data, 100, 100);
+
+        return canvas.toDataURL().split(',')[1];
+    }
+
+    function validateCall() {
+        if (confirm('Êtes-vous sûr de vouloir valider cet appel ? Cette action est irréversible.')) {
+            // Ici, vous pouvez ajouter la logique pour finaliser la session
+            alert('Appel validé avec succès !');
+            window.location.href = '/enseignant/dashboard/';
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

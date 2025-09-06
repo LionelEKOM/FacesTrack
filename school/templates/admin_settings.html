@@ -1,0 +1,95 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Paramètres Système - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_course_management' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Gestion des cours
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Présences (vue globale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks des parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_notifications' %}" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Notifications envoyées
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export des registres
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link active" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        Paramètres système
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Paramètres Système</h2>
+    <p class="text-muted">Configuration et administration du système</p>
+</div>
+
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Configuration Système</h3>
+    </div>
+    <div class="card-content">
+        <p>Fonctionnalité en cours de développement...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-settings');
+        }
+    });
+</script>
+{% endblock %}

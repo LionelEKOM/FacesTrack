@@ -1,0 +1,361 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Admin - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="#" class="nav-link active" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_course_management' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Gestion des cours
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Présences (vue globale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks des parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export des registres
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        Paramètres système
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Tableau de bord Administrateur</h2>
+            <p class="text-muted mb-0">Vue d'ensemble du collège FaceTrack</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="exportData('excel')">
+                <i class="fas fa-file-excel me-2"></i>Export Excel
+            </button>
+            <button class="btn btn-outline-success" onclick="exportData('pdf')">
+                <i class="fas fa-file-pdf me-2"></i>Export PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Élèves</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ total_students }}</div>
+        <div class="card-label">Élèves inscrits</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Enseignants</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ total_teachers }}</div>
+        <div class="card-label">Enseignants actifs</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Parents</h3>
+            <div class="card-icon blue">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ total_parents }}</div>
+        <div class="card-label">Parents connectés</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Taux de Présence</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-percentage"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ attendance_rate }}%</div>
+        <div class="card-label">30 derniers jours</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Absences Signalées</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ absences_signalees }}</div>
+        <div class="card-label">30 derniers jours</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Classes Actives</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-school"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ active_classes }}</div>
+        <div class="card-label">Classes en cours</div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="charts-section">
+    <div class="chart-card">
+        <h3 class="chart-title">Évolution des Présences (Ce Mois)</h3>
+        <canvas id="presenceChart" height="100"></canvas>
+    </div>
+
+    <div class="chart-card">
+        <h3 class="chart-title">Absences par Classe</h3>
+        <canvas id="absenceChart" height="100"></canvas>
+    </div>
+</div>
+
+<!-- Additional Information -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Cours du Jour</h3>
+                <div class="card-icon primary">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+            </div>
+            <div class="card-value">{{ cours_aujourd_hui }}</div>
+            <div class="card-label">Cours programmés aujourd'hui</div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Sessions d'Appel</h3>
+                <div class="card-icon accent">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+            </div>
+            <div class="card-value">{{ sessions_en_cours }}</div>
+            <div class="card-label">Sessions en cours actuellement</div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Display -->
+{% if error %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Attention :</strong> {{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<!-- Recent Activity & Notifications -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="recent-activity">
+            <h3 class="chart-title mb-4">Activités Récentes</h3>
+
+            {% if recent_activities %}
+            {% for activity in recent_activities %}
+            <div class="activity-item">
+                <div class="activity-icon {{ activity.color }}">
+                    <i class="{{ activity.icon }}"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">{{ activity.description }}</div>
+                    <div class="activity-time">{{ activity.time }}</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                <p>Aucune activité récente</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="recent-activity">
+            <h3 class="chart-title mb-4">Dernières Notifications</h3>
+
+            {% if recent_notifications %}
+            {% for notification in recent_notifications %}
+            <div class="activity-item">
+                <div class="activity-icon primary">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">{{ notification.titre }}</div>
+                    <div class="activity-time">{{ notification.date_creation|date:"H:i" }}</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-bell-slash fa-2x mb-3"></i>
+                <p>Aucune notification récente</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Charts initialization
+    document.addEventListener('DOMContentLoaded', function () {
+        // Maintenir l'état actif de la sidebar
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-dashboard');
+        }
+
+        // Presence evolution chart
+        const presenceCtx = document.getElementById('presenceChart');
+        if (presenceCtx) {
+            new Chart(presenceCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+                    datasets: [{
+                        label: 'Taux de présence (%)',
+                        data: [92, 94, 96, 95],
+                        borderColor: '#f79320',
+                        backgroundColor: 'rgba(247, 147, 32, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        // Absence by class chart
+        const absenceCtx = document.getElementById('absenceChart');
+        if (absenceCtx) {
+            new Chart(absenceCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['6ème', '5ème', '4ème', '3ème'],
+                    datasets: [{
+                        data: [12, 18, 15, 22],
+                        backgroundColor: [
+                            '#f79320',
+                            '#00bf63',
+                            '#3b82f6',
+                            '#8b5cf6'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // Export functions
+    function exportData(format) {
+        showNotification(`Export ${format.toUpperCase()} en cours...`, 'info');
+        // Implementation for data export
+        setTimeout(() => {
+            showNotification(`Export ${format.toUpperCase()} terminé avec succès !`, 'success');
+        }, 2000);
+    }
+
+    // Notification helper
+    function showNotification(message, type = 'info') {
+        const alertClass = `alert-${type}`;
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

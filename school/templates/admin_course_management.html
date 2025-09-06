@@ -1,0 +1,799 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Cours - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="#" class="nav-link active" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Gestion des cours
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Présences (vue globale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks des parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_notifications' %}" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Notifications envoyées
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export des registres
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        Paramètres système
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Gestion des Cours</h2>
+            <p class="text-muted mb-0">Assignation des cours aux enseignants et planification</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourseModal">
+                <i class="fas fa-plus me-2"></i>Créer un cours
+            </button>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createClassModal">
+                <i class="fas fa-plus me-2"></i>Nouvelle classe
+            </button>
+            <button class="btn btn-outline-secondary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid mb-4">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Cours</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ total_cours }}</div>
+        <div class="card-label">Cours programmés</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Cours Aujourd'hui</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ cours_aujourd_hui }}</div>
+        <div class="card-label">Cours du jour</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Sans Enseignant</h3>
+            <div class="card-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+        </div>
+        <div class="card-value">{{ cours_sans_enseignant }}</div>
+        <div class="card-label">À assigner</div>
+    </div>
+</div>
+
+<!-- Messages d'alerte -->
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    <i
+        class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+
+<!-- Liste des Cours avec pagination -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Liste des Cours</h3>
+        <div class="card-icon primary">
+            <i class="fas fa-list"></i>
+        </div>
+    </div>
+    <div class="card-content">
+        {% if cours_page %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Matière</th>
+                        <th>Classe</th>
+                        <th>Enseignant</th>
+                        <th>Date</th>
+                        <th>Horaire</th>
+                        <th>Salle</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in cours_page %}
+                    <tr
+                        class="{% if not c.enseignant %}table-warning{% elif c.date < today %}table-secondary{% endif %}">
+                        <td>
+                            <strong>{{ c.matiere.nom }}</strong>
+                            <br><small class="text-muted">{{ c.matiere.code }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ c.classe.nom }}</span>
+                        </td>
+                        <td>
+                            {% if c.enseignant %}
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm me-2">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ c.enseignant.user.get_full_name }}</strong>
+                                    {% if c.enseignant.specialite %}
+                                    <br><small class="text-muted">{{ c.enseignant.specialite }}</small>
+                                    {% else %}
+                                    <br><small class="text-muted">Spécialité non définie</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Non assigné
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold">{{ c.date|date:"d/m/Y" }}</div>
+                                <small class="text-muted">{{ c.date|date:"l"|title }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-center">
+                                <div class="fw-bold">{{ c.heure_debut|time:"H:i" }} - {{ c.heure_fin|time:"H:i" }}</div>
+                                <small class="text-muted">
+                                    {% widthratio c.heure_fin|time:"H:i" c.heure_debut|time:"H:i" 1 %}h
+                                </small>
+                            </div>
+                        </td>
+                        <td>
+                            {% if c.salle %}
+                            <span class="badge bg-info">{{ c.salle }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.date < today %} <span class="badge bg-secondary">Terminé</span>
+                                {% elif c.date == today %}
+                                <span class="badge bg-success">Aujourd'hui</span>
+                                {% else %}
+                                <span class="badge bg-primary">À venir</span>
+                                {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                {% if not c.enseignant %}
+                                <button class="btn btn-warning" data-bs-toggle="modal"
+                                    data-bs-target="#assignCourseModal" data-cours-id="{{ c.id }}"
+                                    data-cours-nom="{{ c.matiere.nom }} - {{ c.classe.nom }}">
+                                    <i class="fas fa-user-plus" title="Assigner un enseignant"></i>
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#editCourseModal"
+                                    data-cours="{{ c.id }}">
+                                    <i class="fas fa-edit" title="Modifier"></i>
+                                </button>
+                                <button class="btn btn-danger"
+                                    onclick="deleteCourse('{{ c.id }}', '{{ c.matiere.nom }} - {{ c.classe.nom }}')">
+                                    <i class="fas fa-trash" title="Supprimer"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- Pagination -->
+        <nav aria-label="Pagination des cours" class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if cours_page.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ cours_page.previous_page_number }}">Précédent</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Précédent</span>
+                </li>
+                {% endif %}
+                {% for num in cours_page.paginator.page_range %}
+                <li class="page-item {% if cours_page.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endfor %}
+                {% if cours_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ cours_page.next_page_number }}">Suivant</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Suivant</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-book fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">Aucun cours programmé</h4>
+            <p class="text-muted">Commencez par créer des cours et les assigner aux enseignants.</p>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourseModal">
+                <i class="fas fa-plus me-2"></i>Créer le premier cours
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Création de Cours -->
+<div class="modal fade" id="createCourseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Créer un nouveau cours
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_course">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="matiere" class="form-label">Matière *</label>
+                            <select class="form-select" id="matiere" name="matiere" required>
+                                <option value="">Sélectionner une matière</option>
+                                {% for matiere in matieres %}
+                                <option value="{{ matiere.id }}">{{ matiere.nom }} ({{ matiere.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="classe" class="form-label">Classe *</label>
+                            <select class="form-select" id="classe" name="classe" required>
+                                <option value="">Sélectionner une classe</option>
+                                {% for classe in classes %}
+                                <option value="{{ classe.id }}">{{ classe.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="enseignant" class="form-label">Enseignant *</label>
+                            <select class="form-select" id="enseignant" name="enseignant" required>
+                                <option value="">Sélectionner un enseignant</option>
+                                {% for enseignant in enseignants %}
+                                <option value="{{ enseignant.id }}">{{ enseignant.user.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="salle" class="form-label">Salle</label>
+                            <input type="text" class="form-control" id="salle" name="salle" placeholder="ex: Salle 101">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="date" class="form-label">Date *</label>
+                            <input type="date" class="form-control" id="date" name="date" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="heure_debut" class="form-label">Heure début *</label>
+                            <input type="time" class="form-control" id="heure_debut" name="heure_debut" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="heure_fin" class="form-label">Heure fin *</label>
+                            <input type="time" class="form-control" id="heure_fin" name="heure_fin" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Créer le cours
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Création de Classe -->
+<div class="modal fade" id="createClassModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Créer une nouvelle classe
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_class">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="class_name" class="form-label">Nom de la classe *</label>
+                        <select class="form-select" id="class_name" name="class_name" required>
+                            <option value="">Sélectionner une classe</option>
+                            <option value="6A">6ème A</option>
+                            <option value="6B">6ème B</option>
+                            <option value="5A">5ème A</option>
+                            <option value="5B">5ème B</option>
+                            <option value="4A">4ème A</option>
+                            <option value="4B">4ème B</option>
+                            <option value="3A">3ème A</option>
+                            <option value="3B">3ème B</option>
+                            <option value="2ND">2nde</option>
+                            <option value="1ERE">1ère</option>
+                            <option value="TLE">Terminale</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="class_capacity" class="form-label">Capacité maximale</label>
+                        <input type="number" class="form-control" id="class_capacity" name="class_capacity"
+                            placeholder="ex: 30" min="1" max="50" value="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="class_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="class_description" name="class_description" rows="3"
+                            placeholder="Description optionnelle de la classe"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Créer la classe
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Assignation de Cours -->
+<div class="modal fade" id="assignCourseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-plus me-2"></i>Assigner un enseignant
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign_course">
+                <input type="hidden" name="cours_id" id="assignCoursId">
+                <div class="modal-body">
+                    <p class="mb-3">Assigner le cours <strong id="assignCoursNom"></strong> à un enseignant :</p>
+                    <div class="mb-3">
+                        <label for="enseignant_id" class="form-label">Enseignant *</label>
+                        <select class="form-select" id="enseignant_id" name="enseignant_id" required>
+                            <option value="">Sélectionner un enseignant</option>
+                            {% for enseignant in enseignants %}
+                            <option value="{{ enseignant.id }}">{{ enseignant.user.get_full_name }} - {{
+                                enseignant.specialite|default:"Spécialité non définie" }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-user-plus me-2"></i>Assigner
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmation de Suppression -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le cours <strong id="deleteCoursNom"></strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible et supprimera également toutes les sessions
+                        d'appel associées.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_course">
+                    <input type="hidden" name="cours_id" id="deleteCoursId">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Styles simples pour garantir l'accessibilité des champs */
+    .modal {
+        z-index: 1050 !important;
+    }
+
+    .modal-dialog {
+        z-index: 1055 !important;
+        display: flex;
+        align-items: center;
+        min-height: 100vh;
+        justify-content: center;
+    }
+
+    .modal.fade .modal-dialog {
+        transition: transform 0.3s ease-out;
+        transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+        .modal-dialog {
+            min-height: 100dvh;
+            align-items: flex-end;
+        }
+    }
+
+    .modal-content {
+        z-index: 1060 !important;
+        background: #fff !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Correction AGRESSIVE pour pointer-events et z-index sur tous les éléments de la modale */
+    .modal *,
+    .modal *:before,
+    .modal *:after {
+        pointer-events: auto !important;
+        z-index: 1061 !important;
+    }
+
+    /* Suppression de l'assombrissement du fond lors de l'ouverture de la modale */
+    .modal-backdrop {
+        background: transparent !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    .modal input,
+    .modal select,
+    .modal textarea {
+        pointer-events: auto !important;
+        user-select: auto !important;
+        cursor: text !important;
+    }
+
+    .modal select {
+        cursor: pointer !important;
+    }
+
+    .modal .form-control,
+    .modal .form-select {
+        background-color: #fff !important;
+        border: 1px solid #ced4da !important;
+        color: #495057 !important;
+        box-shadow: none;
+        transition: none;
+    }
+
+    .modal .form-control:focus,
+    .modal .form-select:focus {
+        outline: 2px solid #007bff !important;
+        border-color: #007bff !important;
+        background-color: #fff !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+    }
+
+    /* Assurer que les champs sont visibles et cliquables */
+    .modal input[type="text"],
+    .modal input[type="date"],
+    .modal input[type="time"],
+    .modal input[type="number"],
+    .modal select,
+    .modal textarea {
+        position: relative !important;
+        z-index: 1 !important;
+        pointer-events: auto !important;
+        cursor: text !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .modal select {
+        cursor: pointer !important;
+    }
+
+    /* Styles pour les tableaux */
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .table th,
+    .table td {
+        vertical-align: middle;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* Styles pour les badges de statut */
+    .badge {
+        font-size: 0.75em;
+        padding: 0.35em 0.65em;
+    }
+
+    /* Styles pour les cartes de statistiques */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .dashboard-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+        background: #f8f9fa;
+        color: #222;
+        padding: 1.5rem;
+        position: relative;
+    }
+
+    .card-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .card-icon {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        opacity: 0.8;
+    }
+
+    .card-content {
+        padding: 1.5rem;
+    }
+
+    /* Styles pour les boutons */
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .modal-dialog {
+            margin: 1rem;
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('Page chargée, initialisation...');
+
+        // Maintenir l'état actif de la sidebar
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-courses');
+        }
+
+        // Définir la date d'aujourd'hui comme valeur par défaut
+        const today = new Date().toISOString().split('T')[0];
+        const dateField = document.getElementById('date');
+        if (dateField) {
+            dateField.value = today;
+            console.log('Date définie:', today);
+        }
+
+        // Gestion du modal d'assignation
+        const assignModal = document.getElementById('assignCourseModal');
+        if (assignModal) {
+            assignModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const coursId = button.getAttribute('data-cours-id');
+                const coursNom = button.getAttribute('data-cours-nom');
+
+                document.getElementById('assignCoursId').value = coursId;
+                document.getElementById('assignCoursNom').textContent = coursNom;
+            });
+        }
+
+        // Test des champs de la modal de création de cours
+        const createCourseModal = document.getElementById('createCourseModal');
+        if (createCourseModal) {
+            // ...tests JS ici si besoin...
+        }
+
+        // Validation du formulaire de création de cours
+        const createCourseForm = document.querySelector('#createCourseModal form');
+        if (createCourseForm) {
+            createCourseForm.addEventListener('submit', function (e) {
+                console.log('Soumission du formulaire...');
+
+                const heureDebut = document.getElementById('heure_debut').value;
+                const heureFin = document.getElementById('heure_fin').value;
+
+                if (heureDebut >= heureFin) {
+                    e.preventDefault();
+                    alert('L\'heure de fin doit être postérieure à l\'heure de début.');
+                    return false;
+                }
+
+                console.log('Formulaire valide, envoi...');
+            });
+        }
+
+        // Validation du formulaire de création de classe
+        const createClassForm = document.querySelector('#createClassModal form');
+        if (createClassForm) {
+            createClassForm.addEventListener('submit', function (e) {
+                const className = document.getElementById('class_name').value.trim();
+
+                if (!className) {
+                    e.preventDefault();
+                    alert('Le nom de la classe est obligatoire.');
+                    return false;
+                }
+
+                // Validation du nom de classe (format: Niveau + Lettre)
+                const levelPattern = /^(6A|6B|5A|5B|4A|4B|3A|3B|2ND|1ERE|TLE)$/;
+                if (!levelPattern.test(className)) {
+                    e.preventDefault();
+                    alert('Niveau de classe invalide.');
+                    return false;
+                }
+            });
+        }
+    });
+
+    // Fonction de suppression de cours
+    function deleteCourse(coursId, coursNom) {
+        document.getElementById('deleteCoursId').value = coursId;
+        document.getElementById('deleteCoursNom').textContent = coursNom;
+
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        deleteModal.show();
+    }
+
+    // Fonction de test manuel des champs (accessible depuis la console)
+    window.testModalFields = function () {
+        const modal = document.getElementById('createCourseModal');
+        if (modal) {
+            const fields = modal.querySelectorAll('input, select');
+            console.log('=== TEST MANUEL DES CHAMPS ===');
+            fields.forEach((field, index) => {
+                console.log(`Champ ${index + 1}:`, {
+                    id: field.id,
+                    type: field.type,
+                    name: field.name,
+                    disabled: field.disabled,
+                    readonly: field.readOnly,
+                    value: field.value,
+                    pointerEvents: window.getComputedStyle(field).pointerEvents,
+                    zIndex: window.getComputedStyle(field).zIndex
+                });
+            });
+        } else {
+            console.log('Modal non trouvée');
+        }
+    };
+</script>
+{% endblock %}

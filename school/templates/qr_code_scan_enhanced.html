@@ -1,0 +1,446 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Démarrer l'Appel - FaceTrack{% endblock %}
+
+{% block sidebar %}
+{% include 'sidebar_teacher.html' %}
+{% endblock %}
+
+{% block content %}
+<!-- Session Data -->
+<div data-session-id="{{ session_appel.id }}" style="display: none;"></div>
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Démarrer l'Appel</h2>
+            <p class="text-muted mb-0">{{ cours.matiere.nom }} - {{ cours.classe.nom }} | {{ cours.date|date:"d/m/Y" }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" id="startScan" onclick="startQRScan()">
+                <i class="fas fa-qrcode me-2"></i>Démarrer le scan
+            </button>
+            <button class="btn btn-primary" id="validateCall" onclick="validateCall()" disabled>
+                <i class="fas fa-check me-2"></i>Terminer l'appel
+            </button>
+            <button class="btn btn-outline-secondary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Informations du Cours -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Informations du Cours</h3>
+                <div class="card-icon primary">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Matière:</strong><br>{{ cours.matiere.nom }}</p>
+                        <p><strong>Classe:</strong><br>{{ cours.classe.nom }}</p>
+                        <p><strong>Date:</strong><br>{{ cours.date|date:"d/m/Y" }}</p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Horaire:</strong><br>{{ cours.heure_debut|time:"H:i" }} - {{
+                            cours.heure_fin|time:"H:i" }}</p>
+                        <p><strong>Salle:</strong><br>{{ cours.salle }}</p>
+                        <p><strong>Total élèves:</strong><br>{{ eleves.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Statistiques en Temps Réel</h3>
+                <div class="card-icon accent">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-value text-success" id="presentCount">0</div>
+                            <div class="stat-label">Présents</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-value text-warning" id="lateCount">0</div>
+                            <div class="stat-label">Retards</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-value text-danger" id="absentCount">0</div>
+                            <div class="stat-label">Absents</div>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="stat-item">
+                            <div class="stat-value text-info" id="exempteCount">0</div>
+                            <div class="stat-label">Exemptés</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-success" id="attendanceProgress" role="progressbar" style="width: 0%">
+                    </div>
+                </div>
+                <p class="text-center mt-2 mb-0">
+                    <small class="text-muted">Taux de présence: <span id="attendanceRate">0%</span></small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Scanner Section -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Scanner QR Code</h3>
+                <div class="card-icon success">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div id="qrScannerContainer" class="text-center" style="display: none;">
+                    <div id="qrReader" class="mb-3"></div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Présentez le QR code de l'élève devant la caméra pour confirmer sa présence
+                    </div>
+                </div>
+                <div id="qrScannerPlaceholder" class="text-center">
+                    <div class="qr-placeholder">
+                        <i class="fas fa-qrcode fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Scanner QR Code</h4>
+                        <p class="text-muted">Cliquez sur "Démarrer le scan" pour commencer la prise de présence</p>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary" onclick="showMobileInstructions()">
+                                <i class="fas fa-mobile-alt me-2"></i>Instructions pour téléphone
+                            </button>
+                            <a href="{% url 'mobile_qr_scanner' session_appel.id %}" class="btn btn-success ms-2"
+                                target="_blank">
+                                <i class="fas fa-qrcode me-2"></i>Ouvrir Scanner Mobile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div id="scanStatus" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Derniers Scans</h3>
+                <div class="card-icon info">
+                    <i class="fas fa-history"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <div id="recentScans" class="recent-scans">
+                    <p class="text-muted text-center">Aucun scan effectué</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des Élèves avec QR Codes -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Liste des Élèves - QR Codes</h3>
+        <div class="card-icon warning">
+            <i class="fas fa-users"></i>
+        </div>
+    </div>
+    <div class="card-content">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Photo</th>
+                        <th>Nom</th>
+                        <th>Matricule</th>
+                        <th>QR Code</th>
+                        <th>Statut</th>
+                        <th>Heure d'arrivée</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsList">
+                    {% for eleve in eleves %}
+                    <tr data-eleve-id="{{ eleve.id }}" data-matricule="{{ eleve.matricule }}">
+                        <td>
+                            {% if eleve.photo_reference %}
+                            <img src="{{ eleve.photo_reference.url }}" alt="Photo de {{ eleve.user.get_full_name }}"
+                                class="student-photo" width="40" height="40">
+                            {% else %}
+                            <div class="student-photo-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ eleve.user.get_full_name }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ eleve.matricule }}</span>
+                        </td>
+                        <td>
+                            <div class="qr-code-container">
+                                <img src="data:image/png;base64,{{ eleve.get_qr_code_base64|slice:'22:' }}"
+                                    alt="QR Code {{ eleve.matricule }}" class="qr-code-img" width="50" height="50"
+                                    onclick="showQRCodeModal('{{ eleve.matricule }}', '{{ eleve.user.get_full_name }}')">
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary" id="status-{{ eleve.id }}">Absent</span>
+                        </td>
+                        <td id="time-{{ eleve.id }}">-</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="markPresent({{ eleve.id }})">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="markLate({{ eleve.id }})">
+                                <i class="fas fa-clock"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour afficher le QR Code -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">QR Code Élève</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="qrCodeModalContent"></div>
+                <p class="mt-2" id="qrCodeModalText"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Instructions Mobile -->
+<div class="modal fade" id="mobileInstructionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Instructions pour Scan Mobile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Option 1: Scanner Mobile</h6>
+                        <ol>
+                            <li>Cliquez sur "Ouvrir Scanner Mobile"</li>
+                            <li>Ouvrez le lien sur votre téléphone</li>
+                            <li>Scannez les QR codes des élèves</li>
+                            <li>Les présences se mettent à jour automatiquement</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Option 2: Application QR Scanner</h6>
+                        <ol>
+                            <li>Téléchargez une application QR Scanner</li>
+                            <li>Scannez le QR code de l'élève</li>
+                            <li>Copiez le matricule affiché</li>
+                            <li>Marquez manuellement la présence</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <strong>Note:</strong> Vous pouvez aussi marquer manuellement la présence en cliquant sur les
+                    boutons dans la liste des élèves.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables globales
+    let sessionId = {{ session_appel.id }};
+    let scanActive = false;
+
+    // Fonctions pour le scan QR
+    function startQRScan() {
+        scanActive = true;
+        document.getElementById('qrScannerContainer').style.display = 'block';
+        document.getElementById('qrScannerPlaceholder').style.display = 'none';
+        document.getElementById('startScan').disabled = true;
+        document.getElementById('validateCall').disabled = false;
+    }
+
+    function validateCall() {
+        if (confirm('Êtes-vous sûr de vouloir terminer cet appel ?')) {
+            alert('Appel terminé avec succès !');
+            window.location.href = '/enseignant/dashboard/';
+        }
+    }
+
+    // Fonctions utilitaires
+    function showQRCodeModal(matricule, nom) {
+        document.getElementById('qrCodeModalContent').innerHTML =
+            `<img src="data:image/png;base64,{{ eleve.get_qr_code_base64|slice:'22:' }}" alt="QR Code ${matricule}" class="img-fluid">`;
+        document.getElementById('qrCodeModalText').textContent = `${nom} - ${matricule}`;
+        new bootstrap.Modal(document.getElementById('qrCodeModal')).show();
+    }
+
+    function showMobileInstructions() {
+        new bootstrap.Modal(document.getElementById('mobileInstructionsModal')).show();
+    }
+
+    function markPresent(eleveId) {
+        updateStudentStatus(eleveId, 'PRESENT');
+        updateStats();
+    }
+
+    function markLate(eleveId) {
+        updateStudentStatus(eleveId, 'RETARD');
+        updateStats();
+    }
+
+    function updateStudentStatus(eleveId, status) {
+        const statusElement = document.getElementById(`status-${eleveId}`);
+        const timeElement = document.getElementById(`time-${eleveId}`);
+
+        // Mettre à jour le statut
+        statusElement.className = `badge ${getStatusBadgeClass(status)}`;
+        statusElement.textContent = getStatusText(status);
+
+        // Mettre à jour l'heure
+        if (status === 'PRESENT' || status === 'RETARD') {
+            timeElement.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        } else {
+            timeElement.textContent = '-';
+        }
+    }
+
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'PRESENT': return 'bg-success';
+            case 'RETARD': return 'bg-warning';
+            case 'ABSENT': return 'bg-secondary';
+            case 'EXEMPTE': return 'bg-info';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getStatusText(status) {
+        switch (status) {
+            case 'PRESENT': return 'Présent';
+            case 'RETARD': return 'Retard';
+            case 'ABSENT': return 'Absent';
+            case 'EXEMPTE': return 'Exempté';
+            default: return 'Absent';
+        }
+    }
+
+    function updateStats() {
+        // Compter les statuts
+        const presents = document.querySelectorAll('.badge.bg-success').length;
+        const retards = document.querySelectorAll('.badge.bg-warning').length;
+        const absents = document.querySelectorAll('.badge.bg-secondary').length;
+        const exemptes = document.querySelectorAll('.badge.bg-info').length;
+
+        // Mettre à jour les compteurs
+        document.getElementById('presentCount').textContent = presents;
+        document.getElementById('lateCount').textContent = retards;
+        document.getElementById('absentCount').textContent = absents;
+        document.getElementById('exempteCount').textContent = exemptes;
+
+        // Calculer le taux de présence
+        const total = presents + retards + absents + exemptes;
+        const taux = total > 0 ? Math.round(((presents + retards) / total) * 100) : 0;
+
+        document.getElementById('attendanceRate').textContent = `${taux}%`;
+        document.getElementById('attendanceProgress').style.width = `${taux}%`;
+    }
+
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function () {
+        updateStats();
+    });
+</script>
+
+<style>
+    .qr-code-container {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .qr-code-container:hover {
+        transform: scale(1.1);
+    }
+
+    .qr-code-img {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .student-photo {
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .student-photo-placeholder {
+        width: 40px;
+        height: 40px;
+        background-color: #f8f9fa;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+
+    .qr-placeholder {
+        padding: 40px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 2px dashed #dee2e6;
+    }
+
+    .stat-item {
+        padding: 10px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #6c757d;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+

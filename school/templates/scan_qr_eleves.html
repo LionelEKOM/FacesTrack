@@ -1,0 +1,1114 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Scan QR Code - {{ cours.matiere.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-qrcode me-2 text-primary"></i>Scan QR Code
+            </h2>
+            <p class="text-muted mb-0">
+                {{ cours.matiere.nom }} - {{ cours.classe.nom }} | {{ cours.date|date:"d/m/Y" }}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-info" onclick="toggleAutoRefresh()" id="refresh-toggle-btn">
+                <i class="fas fa-sync-alt me-2"></i>Auto-refresh: ON
+            </button>
+            <button class="btn btn-success" onclick="finishAttendance()">
+                <i class="fas fa-check-double me-2"></i>Terminer l'appel
+            </button>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-start">
+            <i class="fas fa-info-circle fa-2x me-3 mt-1"></i>
+            <div>
+                <h6 class="alert-heading mb-2">Comment scanner les QR codes :</h6>
+                <ol class="mb-0">
+                    <li>Ouvrez l'application de scan QR sur votre smartphone</li>
+                    <li>Scannez le QR code de chaque élève présent</li>
+                    <li>Le statut se mettra automatiquement à jour</li>
+                    <li>Utilisez les boutons "Scanner" pour simuler le scan</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques en temps réel -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="stats-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stats-number" id="total-count">{{ eleves_with_presence|length }}</div>
+                    <div class="stats-label">Total Élèves</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white">
+                <div class="card-body">
+                    <div class="stats-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stats-number" id="present-count">0</div>
+                    <div class="stats-label">Présents</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="stats-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stats-number" id="retard-count">0</div>
+                    <div class="stats-label">Retards</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-danger text-white">
+                <div class="card-body">
+                    <div class="stats-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stats-number" id="absent-count">0</div>
+                    <div class="stats-label">Absents</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des élèves avec QR codes -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>Liste des Élèves - QR Codes et Statuts
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                                                              <thead class="table-dark">
+                          <tr>
+                              <th>Photo</th>
+                              <th>Nom</th>
+                              <th>Prénom</th>
+                              <th>Matricule</th>
+                              <th>Statut</th>
+                              <th>Heure</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {% for item in eleves_with_presence %}
+                              <tr id="eleve-row-{{ item.eleve.id }}" class="{% if item.presence and item.presence.statut == 'PRESENT' %}table-success{% elif item.presence and item.presence.statut == 'RETARD' %}table-warning{% else %}table-danger{% endif %} eleve-row" onclick="openEleveModal({{ item.eleve.id }}, '{{ item.eleve.user.first_name }}', '{{ item.eleve.user.last_name }}', event)" style="cursor: pointer;">
+                                  <td>
+                                      {% if item.eleve.photo_reference %}
+                                      <img src="{{ item.eleve.photo_reference.url }}" alt="Photo de {{ item.eleve.user.get_full_name }}" 
+                                           class="rounded-circle" width="50" height="50">
+                                      {% else %}
+                                      <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                           style="width: 50px; height: 50px;">
+                                          <i class="fas fa-user text-white"></i>
+                                      </div>
+                                      {% endif %}
+                                  </td>
+                                  <td><strong>{{ item.eleve.user.last_name }}</strong></td>
+                                  <td>{{ item.eleve.user.first_name }}</td>
+                                  <td>
+                                      <span class="badge bg-secondary matricule-badge">{{ item.eleve.matricule }}</span>
+                                  </td>
+                                  <td>
+                                      <span class="badge" id="status-{{ item.eleve.id }}">
+                                          {% if item.presence and item.presence.statut == 'PRESENT' %}
+                                          <span class="badge bg-success">Présent</span>
+                                          {% elif item.presence and item.presence.statut == 'RETARD' %}
+                                          <span class="badge bg-warning">Retard</span>
+                                          {% else %}
+                                          <span class="badge bg-danger">Absent</span>
+                                          {% endif %}
+                                      </span>
+                                  </td>
+                                  <td id="heure-{{ item.eleve.id }}">
+                                      {% if item.presence and item.presence.heure_arrivee %}
+                                      {{ item.presence.heure_arrivee|time:"H:i" }}
+                                      {% else %}
+                                      -
+                                      {% endif %}
+                                  </td>
+                              </tr>
+                          {% endfor %}
+                      </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-bolt me-2"></i>Actions Rapides
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="d-grid gap-2 d-md-flex">
+                <button class="btn btn-outline-primary" onclick="markAllPresent()">
+                    <i class="fas fa-check-double me-2"></i>Tous Présents
+                </button>
+                <button class="btn btn-outline-secondary" onclick="resetAll()">
+                    <i class="fas fa-undo me-2"></i>Réinitialiser
+                </button>
+                <button class="btn btn-outline-info" onclick="exportAttendance()">
+                    <i class="fas fa-download me-2"></i>Exporter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation pour terminer l'appel -->
+<div class="modal fade" id="finishModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Terminer l'appel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir terminer cet appel ?</p>
+                <div class="alert alert-info">
+                    <strong>Résumé :</strong>
+                    <ul class="mb-0">
+                        <li>Présents : <span id="modal-present-count">0</span></li>
+                        <li>Retards : <span id="modal-retard-count">0</span></li>
+                        <li>Absents : <span id="modal-absent-count">0</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" onclick="confirmFinish()">
+                    <i class="fas fa-check me-2"></i>Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal des informations de l'élève et QR code -->
+<div class="modal fade" id="eleveModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg modal-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user me-2"></i>Informations de l'Élève
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Informations de l'élève -->
+                    <div class="col-md-6">
+                        <div class="text-center mb-3">
+                            <div id="eleve-photo" class="mx-auto mb-3" style="width: 120px; height: 120px;">
+                                <!-- Photo sera chargée dynamiquement -->
+                            </div>
+                            <h4 id="eleve-nom" class="mb-1"></h4>
+                            <p class="text-muted mb-2" id="eleve-classe">{{ cours.classe.nom }}</p>
+                            <div class="mb-3">
+                                <span class="badge" id="eleve-statut-badge"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Détails du Cours</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled mb-0">
+                                    <li><strong>Matière :</strong> {{ cours.matiere.nom }}</li>
+                                    <li><strong>Classe :</strong> {{ cours.classe.nom }}</li>
+                                    <li><strong>Salle :</strong> {{ cours.salle }}</li>
+                                    <li><strong>Horaire :</strong> {{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}</li>
+                                    <li><strong>Date :</strong> {{ cours.date|date:"d/m/Y" }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- QR Code de l'élève -->
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <h6 class="mb-3"><i class="fas fa-qrcode me-2"></i>QR Code de l'Élève</h6>
+                            <div class="qr-code-modal-container mb-3">
+                                <div id="eleve-qr-code" class="qr-code-modal-placeholder">
+                                    <!-- QR code sera généré dynamiquement -->
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-mobile-alt me-2"></i>
+                                <strong>Instructions :</strong>
+                                <p class="mb-1 small">1. Ouvrez l'app de scan QR sur votre smartphone</p>
+                                <p class="mb-1 small">2. Scannez ce QR code</p>
+                                <p class="mb-0 small">3. Le statut passera automatiquement à "Présent"</p>
+                            </div>
+                            
+                                                         <div class="d-grid gap-2">
+                                 <button type="button" class="btn btn-primary" onclick="simulateQRScan()">
+                                     <i class="fas fa-camera me-2"></i>Scanner QR Code (Simulation)
+                                 </button>
+                                 <button type="button" class="btn btn-warning" onclick="markEleveRetard()">
+                                     <i class="fas fa-clock me-2"></i>Marquer en Retard
+                                 </button>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+
+    .stats-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .table img {
+        object-fit: cover;
+    }
+
+    .matricule-badge {
+        font-size: 0.8rem;
+        padding: 0.4em 0.6em;
+        background-color: #6c757d !important;
+        color: white !important;
+    }
+
+    .btn-group .btn {
+        border-radius: 0;
+    }
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: 0.375rem;
+        border-bottom-left-radius: 0.375rem;
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: 0.375rem;
+        border-bottom-right-radius: 0.375rem;
+    }
+
+    .alert-info {
+        border-left: 4px solid #17a2b8;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 15px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0 !important;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+        transform: scale(1.01);
+        transition: all 0.2s ease;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.5em 0.8em;
+    }
+
+    .eleve-row:hover {
+        background-color: rgba(0, 123, 255, 0.1) !important;
+        transform: scale(1.01);
+        transition: all 0.2s ease;
+    }
+
+    .qr-code-modal-container {
+        background: white;
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        padding: 15px;
+        min-height: 280px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .qr-code-modal-placeholder {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    .qr-code-generated {
+        width: 180px;
+        height: 180px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .qr-code-loading {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .eleve-photo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #fff;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .eleve-photo-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid #fff;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Styles personnalisés pour la modal */
+    .modal {
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    .modal-dialog {
+        margin: 0;
+        position: absolute;
+        top: 68%;
+        left: 50%;
+        transform: translate(-50%, -50%) !important;
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 20px 20px 0 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+        border-radius: 0 0 20px 20px;
+        padding: 1rem 2rem;
+    }
+
+    /* Styles pour les QR codes */
+    .qr-code-image {
+        width: 180px !important;
+        height: 180px !important;
+        display: block;
+        margin: 0 auto;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+    }
+
+    .qr-code-generated {
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .qr-code-loading {
+        padding: 40px;
+        text-align: center;
+        color: #6c757d;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .qr-code-simple {
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .qr-code-placeholder {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 15px;
+    }
+    
+    .qr-code-fallback {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Variables globales
+    const sessionId = '{{ session_appel.id }}';
+    const coursId = '{{ cours.id }}';
+    const totalEleves = {{ eleves_with_presence|length }};
+    let currentEleveId = null;
+    let currentEleveData = null;
+
+    // Fonction pour ouvrir la modal d'un élève
+    function openEleveModal(eleveId, prenom, nom, event) {
+        currentEleveId = eleveId;
+        
+        // Empêcher la propagation de l'événement click
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        // Récupérer les données de l'élève
+        const eleveRow = document.getElementById(`eleve-row-${eleveId}`);
+        const statusBadge = document.getElementById(`status-${eleveId}`);
+        const photoCell = eleveRow.querySelector('td:first-child img, td:first-child div');
+        
+        // Préparer les données de l'élève
+        currentEleveData = {
+            id: eleveId,
+            prenom: prenom,
+            nom: nom,
+            photo: photoCell,
+            statut: statusBadge.textContent.trim(),
+            classe: '{{ cours.classe.nom }}',
+            matiere: '{{ cours.matiere.nom }}',
+            salle: '{{ cours.salle }}',
+            horaire: '{{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}',
+            date: '{{ cours.date|date:"d/m/Y" }}'
+        };
+        
+        // Remplir la modal avec les informations
+        fillEleveModal();
+        
+        // Générer le QR code
+        generateQRCode(eleveId, prenom, nom);
+        
+        // Afficher la modal
+        const modal = new bootstrap.Modal(document.getElementById('eleveModal'), {
+            backdrop: false,
+            keyboard: true
+        });
+        modal.show();
+        
+        // Démarrer une vérification rapide de la présence de cet élève
+        // Vérifier toutes les 1 seconde quand la modal est ouverte
+        window.elevePresenceInterval = setInterval(() => {
+            if (currentEleveId === eleveId) {
+                checkElevePresence(eleveId);
+            } else {
+                // Si la modal a été fermée, arrêter la vérification
+                clearInterval(window.elevePresenceInterval);
+                window.elevePresenceInterval = null;
+            }
+        }, 1000);
+    }
+    
+    // Fonction pour fermer la modal d'un élève
+    function closeEleveModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('eleveModal'));
+        if (modal) {
+            modal.hide();
+        }
+        // Réinitialiser les variables
+        currentEleveId = null;
+        currentEleveData = null;
+        
+        // Nettoyer les intervalles de vérification spécifiques
+        if (window.elevePresenceInterval) {
+            clearInterval(window.elevePresenceInterval);
+            window.elevePresenceInterval = null;
+        }
+    }
+    
+    // Fonction pour vérifier rapidement la présence d'un élève spécifique
+    function checkElevePresence(eleveId) {
+        if (!eleveId) return;
+        
+        fetch(`/api/check-presence-status/?eleve_id=${eleveId}&session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.presence) {
+                // Si la présence a été confirmée, fermer la modal automatiquement
+                if (data.presence.statut === 'PRESENT' && data.presence.updated_at) {
+                    setTimeout(() => {
+                        closeEleveModal();
+                        showNotification(`Présence confirmée pour ${data.presence.eleve_name} ! Modal fermée automatiquement.`, 'success');
+                    }, 300); // Délai réduit pour une fermeture plus rapide
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Erreur lors de la vérification de la présence:', error);
+        });
+    }
+
+    // Fonction pour remplir la modal avec les informations de l'élève
+    function fillEleveModal() {
+        if (!currentEleveData) return;
+        
+        // Photo de l'élève
+        const photoContainer = document.getElementById('eleve-photo');
+        if (currentEleveData.photo && currentEleveData.photo.src) {
+            photoContainer.innerHTML = `<img src="${currentEleveData.photo.src}" alt="Photo de ${currentEleveData.prenom} ${currentEleveData.nom}" class="eleve-photo">`;
+        } else {
+            photoContainer.innerHTML = `<div class="eleve-photo-placeholder"><i class="fas fa-user fa-3x text-muted"></i></div>`;
+        }
+        
+        // Nom et classe
+        document.getElementById('eleve-nom').textContent = `${currentEleveData.prenom} ${currentEleveData.nom}`;
+        
+        // Statut
+        const statutBadge = document.getElementById('eleve-statut-badge');
+        if (currentEleveData.statut.includes('Présent')) {
+            statutBadge.innerHTML = '<span class="badge bg-success">Présent</span>';
+        } else if (currentEleveData.statut.includes('Retard')) {
+            statutBadge.innerHTML = '<span class="badge bg-warning">Retard</span>';
+        } else {
+            statutBadge.innerHTML = '<span class="badge bg-danger">Absent</span>';
+        }
+    }
+
+    // Fonction pour générer le QR code de l'élève (optimisée)
+    function generateQRCode(eleveId, prenom, nom) {
+        const qrContainer = document.getElementById('eleve-qr-code');
+        
+        // Récupérer le matricule directement depuis la ligne du tableau
+        const matricule = getMatriculeFromEleveId(eleveId);
+        
+        // Construire l'URL de redirection mobile avec les vrais paramètres
+        const mobileCheckinUrl = `${window.location.origin}/mobile-checkin/${eleveId}/${coursId}/${sessionId}/`;
+        
+        // Générer le QR code dynamiquement avec l'URL complète
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mobileCheckinUrl)}`;
+        
+        // Afficher immédiatement le QR code
+        qrContainer.innerHTML = `
+            <div class="qr-code-generated">
+                <img src="${qrCodeUrl}" alt="QR Code ${prenom} ${nom}" class="qr-code-image" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="qr-code-fallback" style="display: none;">
+                    <div class="qr-code-simple">
+                        <div class="qr-code-placeholder">
+                            <i class="fas fa-qrcode fa-4x text-muted mb-2"></i>
+                            <p class="text-muted small">${matricule || `ID: ${eleveId}`}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="small text-muted text-center mt-2">
+                    <strong>${prenom} ${nom}</strong><br>
+                    <small>${matricule ? 'Matricule: ' + matricule : 'ID: ' + eleveId}</small>
+                </div>
+                <div class="alert alert-info mt-2">
+                    <small><i class="fas fa-mobile-alt me-1"></i>Scannez ce QR code avec votre smartphone pour confirmer la présence</small>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Fonction pour récupérer le matricule d'un élève
+    function getMatriculeFromEleveId(eleveId) {
+        const eleveRow = document.getElementById(`eleve-row-${eleveId}`);
+        if (eleveRow) {
+            const matriculeElement = eleveRow.querySelector('.matricule-badge');
+            if (matriculeElement) {
+                return matriculeElement.textContent.trim();
+            }
+        }
+        return null;
+    }
+
+    // Ces fonctions ont été supprimées car nous utilisons maintenant les QR codes pré-générés
+
+    // Fonction pour simuler le scan du QR code
+    function simulateQRScan() {
+        if (!currentEleveId) return;
+        
+        // Afficher un indicateur de chargement
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scan en cours...';
+        button.disabled = true;
+        
+        // Simuler le processus de scan
+        setTimeout(() => {
+            // Mettre à jour le statut de l'élève
+            updatePresence(currentEleveId, 'PRESENT');
+            
+            // Fermer la modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('eleveModal'));
+            modal.hide();
+            
+            // Restaurer le bouton
+            button.innerHTML = originalText;
+            button.disabled = false;
+            
+            // Notification de succès
+            showNotification(`QR code scanné avec succès ! ${currentEleveData.prenom} ${currentEleveData.nom} est maintenant présent.`, 'success');
+            
+        }, 2000);
+    }
+
+    // Fonction pour marquer manuellement l'élève comme présent
+    function markElevePresent() {
+        if (!currentEleveId) return;
+        
+        // Mettre à jour le statut
+        updatePresence(currentEleveId, 'PRESENT');
+        
+        // Fermer la modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('eleveModal'));
+        modal.hide();
+        
+        // Notification de succès
+        showNotification(`${currentEleveData.prenom} ${currentEleveData.nom} marqué comme présent.`, 'success');
+    }
+
+    // Fonction pour marquer manuellement l'élève en retard
+    function markEleveRetard() {
+        if (!currentEleveId) return;
+        
+        // Mettre à jour le statut
+        updatePresence(currentEleveId, 'RETARD');
+        
+        // Fermer la modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('eleveModal'));
+        modal.hide();
+        
+        // Notification de succès
+        showNotification(`${currentEleveData.prenom} ${currentEleveData.nom} marqué en retard.`, 'warning');
+    }
+
+
+
+    // Fonction pour mettre à jour la présence via l'API
+    function updatePresence(eleveId, statut) {
+        const data = {
+            eleve_id: eleveId,
+            session_id: sessionId,
+            statut: statut
+        };
+
+        fetch('/api/update-presence-from-scan/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mettre à jour l'interface
+                updateEleveStatus(eleveId, statut);
+                updateStats();
+            } else {
+                showNotification('Erreur lors de la mise à jour.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur de connexion.', 'error');
+        });
+    }
+
+    // Fonction pour mettre à jour le statut d'un élève dans l'interface
+    function updateEleveStatus(eleveId, statut) {
+        const row = document.getElementById(`eleve-row-${eleveId}`);
+        const statusBadge = document.getElementById(`status-${eleveId}`);
+        const heureCell = document.getElementById(`heure-${eleveId}`);
+        
+        // Mettre à jour le badge de statut
+        if (statut === 'PRESENT') {
+            statusBadge.innerHTML = '<span class="badge bg-success">Présent</span>';
+            row.className = 'table-success';
+            heureCell.textContent = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+        } else if (statut === 'RETARD') {
+            statusBadge.innerHTML = '<span class="badge bg-warning">Retard</span>';
+            row.className = 'table-warning';
+            heureCell.textContent = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+        } else {
+            statusBadge.innerHTML = '<span class="badge bg-danger">Absent</span>';
+            row.className = 'table-danger';
+            heureCell.textContent = '-';
+        }
+    }
+
+    // Fonction pour marquer tous les élèves comme présents
+    function markAllPresent() {
+        if (confirm('Marquer tous les élèves comme présents ?')) {
+            showNotification('Mise à jour en cours...', 'info');
+            
+            // Mettre à jour tous les élèves
+            const eleveIds = [{% for item in eleves_with_presence %}{{ item.eleve.id }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+            eleveIds.forEach(eleveId => {
+                updatePresence(eleveId, 'PRESENT');
+            });
+            
+            setTimeout(() => {
+                showNotification('Tous les élèves sont maintenant présents !', 'success');
+            }, 1000);
+        }
+    }
+
+    // Fonction pour réinitialiser tous les statuts
+    function resetAll() {
+        if (confirm('Réinitialiser tous les statuts ?')) {
+            showNotification('Réinitialisation en cours...', 'info');
+            
+            // Remettre tous les élèves en absent
+            const eleveIds = [{% for item in eleves_with_presence %}{{ item.eleve.id }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+            eleveIds.forEach(eleveId => {
+                updatePresence(eleveId, 'ABSENT');
+            });
+            
+            setTimeout(() => {
+                showNotification('Tous les statuts ont été réinitialisés.', 'info');
+            }, 1000);
+        }
+    }
+
+    // Fonction pour terminer l'appel
+    function finishAttendance() {
+        // Calculer les statistiques actuelles
+        const presentCount = document.querySelectorAll('.table-success').length;
+        const retardCount = document.querySelectorAll('.table-warning').length;
+        const absentCount = document.querySelectorAll('.table-danger').length;
+        
+        // Mettre à jour les statistiques dans la modal
+        document.getElementById('modal-present-count').textContent = presentCount;
+        document.getElementById('modal-retard-count').textContent = retardCount;
+        document.getElementById('modal-absent-count').textContent = absentCount;
+        
+        // Afficher la modal
+        const modal = new bootstrap.Modal(document.getElementById('finishModal'));
+        modal.show();
+    }
+
+    // Fonction pour confirmer la fin de l'appel
+    function confirmFinish() {
+        // Fermer la modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('finishModal'));
+        modal.hide();
+        
+        // Afficher une notification de traitement
+        showNotification('Finalisation de l\'appel...', 'info');
+        
+        // Appeler l'API pour terminer l'appel
+        fetch('/api/finish-call/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                session_id: sessionId,
+                cours_id: coursId
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('API Response:', data);
+            if (data.success) {
+                showNotification('Appel terminé avec succès ! Redirection...', 'success');
+            } else {
+                console.error('API Error:', data.error);
+                showNotification('Erreur API mais redirection...', 'warning');
+            }
+            
+            // Rediriger vers le dashboard enseignant dans tous les cas
+            setTimeout(() => {
+                console.log('Redirection vers dashboard...');
+                window.location.href = '/enseignant/dashboard/';
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showNotification('Erreur de connexion mais redirection...', 'warning');
+            
+            // Rediriger même en cas d'erreur
+            setTimeout(() => {
+                console.log('Redirection vers dashboard (fallback)...');
+                window.location.href = '/enseignant/dashboard/';
+            }, 2000);
+        });
+    }
+
+    // Fonction pour exporter les présences
+    function exportAttendance() {
+        showNotification('Export en cours...', 'info');
+        // Ici vous pouvez implémenter l'export des données
+        setTimeout(() => {
+            showNotification('Export terminé !', 'success');
+        }, 2000);
+    }
+
+    // Fonction pour mettre à jour les statistiques
+    function updateStats() {
+        const presentCount = document.querySelectorAll('.table-success').length;
+        const retardCount = document.querySelectorAll('.table-warning').length;
+        const absentCount = document.querySelectorAll('.table-danger').length;
+        
+        document.getElementById('present-count').textContent = presentCount;
+        document.getElementById('retard-count').textContent = retardCount;
+        document.getElementById('absent-count').textContent = absentCount;
+    }
+
+    // Fonction pour afficher les notifications
+    function showNotification(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'error' ? 'danger' : 'info'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'times-circle' : 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        const toastContainer = document.getElementById('toast-container') || createToastContainer();
+        toastContainer.appendChild(toast);
+        
+        const bootstrapToast = new bootstrap.Toast(toast);
+        bootstrapToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toastContainer.removeChild(toast);
+        });
+    }
+
+    // Fonction pour créer le conteneur de notifications
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // Fonction pour récupérer le cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Variables pour le rafraîchissement automatique
+    let autoRefreshInterval = null;
+    let isAutoRefreshEnabled = true;
+
+    // Fonction pour vérifier les mises à jour de présence
+    function checkForUpdates() {
+        fetch(`/api/check-session-updates/?session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.updates) {
+                // Mettre à jour les statuts qui ont changé
+                data.updates.forEach(update => {
+                    updateEleveStatus(update.eleve_id, update.statut);
+                    
+                    // Vérifier si la présence a été confirmée depuis le mobile
+                    if (update.statut === 'PRESENT' && update.updated_at) {
+                        // Si la modal est ouverte pour cet élève, la fermer automatiquement
+                        if (currentEleveId === update.eleve_id) {
+                            setTimeout(() => {
+                                closeEleveModal();
+                                showNotification(`Présence confirmée pour ${update.eleve_name} ! Modal fermée automatiquement.`, 'success');
+                            }, 500);
+                        }
+                    }
+                });
+                
+                // Mettre à jour les statistiques
+                updateStats();
+                
+                // Afficher une notification si des changements ont été détectés
+                if (data.updates.length > 0) {
+                    const names = data.updates.map(u => u.eleve_name).join(', ');
+                    showNotification(`Mise à jour automatique : ${names}`, 'success');
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Erreur lors de la vérification des mises à jour:', error);
+        });
+    }
+
+    // Fonction pour démarrer le rafraîchissement automatique
+    function startAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+        
+        // Vérifier les mises à jour toutes les 1.5 secondes pour une réactivité maximale
+        autoRefreshInterval = setInterval(checkForUpdates, 1500);
+        isAutoRefreshEnabled = true;
+        
+        // Mettre à jour le bouton
+        const toggleBtn = document.getElementById('refresh-toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Auto-refresh: ON';
+            toggleBtn.className = 'btn btn-outline-success';
+        }
+        
+        showNotification('Rafraîchissement automatique activé', 'info');
+    }
+
+    // Fonction pour arrêter le rafraîchissement automatique
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+        isAutoRefreshEnabled = false;
+        
+        // Mettre à jour le bouton
+        const toggleBtn = document.getElementById('refresh-toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Auto-refresh: OFF';
+            toggleBtn.className = 'btn btn-outline-warning';
+        }
+        
+        showNotification('Rafraîchissement automatique désactivé', 'warning');
+    }
+
+    // Fonction pour basculer le rafraîchissement automatique
+    function toggleAutoRefresh() {
+        if (isAutoRefreshEnabled) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    }
+
+    // Initialisation au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        updateStats();
+        showNotification('Interface de scan QR code prête !', 'info');
+        
+        // Démarrer le rafraîchissement automatique
+        startAutoRefresh();
+        
+        // Arrêter le rafraîchissement quand la page n'est plus visible
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else if (isAutoRefreshEnabled) {
+                startAutoRefresh();
+            }
+        });
+        
+        // Écouter la fermeture de la modal pour nettoyer les intervalles
+        const eleveModal = document.getElementById('eleveModal');
+        if (eleveModal) {
+            eleveModal.addEventListener('hidden.bs.modal', function() {
+                // Nettoyer les intervalles de vérification spécifiques
+                if (window.elevePresenceInterval) {
+                    clearInterval(window.elevePresenceInterval);
+                    window.elevePresenceInterval = null;
+                }
+                // Réinitialiser les variables
+                currentEleveId = null;
+                currentEleveData = null;
+            });
+        }
+    });
+</script>
+{% endblock %}

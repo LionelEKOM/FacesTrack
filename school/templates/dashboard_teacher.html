@@ -1,0 +1,609 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Enseignant - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'enseignant_dashboard' %}" class="nav-link active" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_classes' %}" class="nav-link" id="sidebar-classes">
+        <i class="fas fa-chalkboard"></i>
+        Mes classes
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_subjects' %}" class="nav-link" id="sidebar-subjects">
+        <i class="fas fa-book"></i>
+        Mes matières
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'liste_cours_enseignant' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-calendar-alt"></i>
+        Mes cours
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_attendance_today' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-camera"></i>
+        Appels (reconnaissance faciale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'historique_presences' %}" class="nav-link" id="sidebar-history">
+        <i class="fas fa-history"></i>
+        Historique des présences
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Déconnexion
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Tableau de bord Enseignant</h2>
+        <p class="text-muted mb-0">Bienvenue, {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-success" onclick="exportData('excel')">
+            <i class="fas fa-file-excel me-2"></i>Export Excel
+        </button>
+    </div>
+</div>
+
+<!-- Quick Statistics -->
+<div class="stats-grid">
+    <div class="dashboard-card" onclick="refreshStats()" style="cursor: pointer;" title="Cliquer pour actualiser">
+        <div class="card-header">
+            <h3 class="card-title">Cours Aujourd'hui</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+        </div>
+        <div class="card-value" id="cours-count">{{ cours_aujourd_hui.count }}</div>
+        <div class="card-label">Cours programmés</div>
+        <div class="card-footer">
+            <small class="text-muted">Dernière MAJ: <span id="last-update">{{ "now"|date:"H:i" }}</span></small>
+        </div>
+    </div>
+
+    <div class="dashboard-card" onclick="refreshStats()" style="cursor: pointer;" title="Cliquer pour actualiser">
+        <div class="card-header">
+            <h3 class="card-title">Élèves Absents</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-user-times"></i>
+            </div>
+        </div>
+        <div class="card-value" id="absents-count">{{ nb_eleves_absents }}</div>
+        <div class="card-label">Dans mes classes</div>
+        <div class="card-footer">
+            <small class="text-muted">Aujourd'hui</small>
+        </div>
+    </div>
+
+    <div class="dashboard-card" onclick="refreshStats()" style="cursor: pointer;" title="Cliquer pour actualiser">
+        <div class="card-header">
+            <h3 class="card-title">Taux de Présence</h3>
+            <div class="card-icon blue">
+                <i class="fas fa-percentage"></i>
+            </div>
+        </div>
+        <div class="card-value" id="presence-rate">{{ taux_presence }}%</div>
+        <div class="card-label">Cette semaine</div>
+        <div class="card-footer">
+            <small class="text-muted">Moyenne</small>
+        </div>
+    </div>
+
+    <div class="dashboard-card" onclick="refreshStats()" style="cursor: pointer;" title="Cliquer pour actualiser">
+        <div class="card-header">
+            <h3 class="card-title">Classes Actives</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-chalkboard"></i>
+            </div>
+        </div>
+        <div class="card-value" id="classes-count">{{ nb_classes_actives }}</div>
+        <div class="card-label">Classes gérées</div>
+        <div class="card-footer">
+            <small class="text-muted">Total</small>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Schedule & Recent Activity -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-card">
+            <h3 class="chart-title mb-4">Emploi du Temps - Aujourd'hui</h3>
+            <div class="schedule-timeline">
+                {% if cours_with_sessions %}
+                {% for cours_data in cours_with_sessions %}
+                {% with cours=cours_data.cours appel_status=cours_data.appel_status %}
+                <div class="schedule-item">
+                    <div class="schedule-time">{{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}
+                    </div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">{{ cours.matiere.nom }}</div>
+                        <div class="schedule-class">{{ cours.classe.nom }} - {{ cours.salle }}</div>
+                    </div>
+                    <div class="schedule-actions">
+                        {% if appel_status == 'PAS_DEMARRE' or appel_status == 'EN_ATTENTE' %}
+                        <button class="btn btn-sm btn-primary" onclick="startAttendance('{{ cours.id }}')" 
+                                title="Démarrer l'appel avec reconnaissance faciale">
+                            <i class="fas fa-camera me-1"></i>Démarrer l'appel
+                        </button>
+                        {% elif appel_status == 'EN_COURS' %}
+                        <span class="btn btn-sm btn-success disabled" title="Appel en cours">
+                            <i class="fas fa-check me-1"></i>Terminé
+                        </span>
+                        {% endif %}
+                        <button class="btn btn-sm btn-outline-info" onclick="viewCourseDetails('{{ cours.id }}')" 
+                                title="Voir les détails du cours">
+                            <i class="fas fa-info-circle me-1"></i>Détails
+                        </button>
+                        <span class="schedule-status 
+                            {% if appel_status == 'PAS_DEMARRE' %}pending
+                            {% elif appel_status == 'EN_ATTENTE' %}pending
+                            {% elif appel_status == 'EN_COURS' %}in-progress
+                            {% else %}completed{% endif %}" 
+                            id="status-{{ cours.id }}">
+                            {% if appel_status == 'PAS_DEMARRE' %}
+                            <i class="fas fa-clock"></i> À venir
+                            {% elif appel_status == 'EN_ATTENTE' %}
+                                <i class="fas fa-pause"></i> En attente
+                            {% elif appel_status == 'EN_COURS' %}
+                                <i class="fas fa-camera"></i> En cours
+                            {% else %}
+                                <i class="fas fa-check"></i> Terminé
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                    <p>Aucun cours programmé aujourd'hui</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="recent-activity">
+            <h3 class="chart-title mb-4">Derniers Cours & Absences</h3>
+
+            <div class="activity-item">
+                <div class="activity-icon primary">
+                    <i class="fas fa-chalkboard"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Cours 4èmeA - Mathématiques</div>
+                    <div class="activity-time">Aujourd'hui 08:00</div>
+                    <small class="text-success">25 présents / 0 absent</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon accent">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Absence signalée - Marie Dubois</div>
+                    <div class="activity-time">Hier 14:30</div>
+                    <small class="text-warning">4èmeA - Mathématiques</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon blue">
+                    <i class="fas fa-chalkboard"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Cours 3èmeB - Mathématiques</div>
+                    <div class="activity-time">Hier 09:00</div>
+                    <small class="text-success">28 présents / 1 absent</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon purple">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Retard signalé - Thomas Martin</div>
+                    <div class="activity-time">Hier 09:15</div>
+                    <small class="text-info">3èmeB - Mathématiques</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Overview Chart -->
+<div class="chart-card mt-4">
+    <h3 class="chart-title mb-4">Vue d'Ensemble de la Semaine</h3>
+    <canvas id="weeklyChart" height="100"></canvas>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-timeline {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .schedule-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        margin-bottom: 15px;
+        background: var(--bg-light);
+    }
+
+    .schedule-time {
+        min-width: 120px;
+        font-weight: 600;
+        color: var(--primary-color);
+        font-size: 0.9rem;
+    }
+
+    .schedule-content {
+        flex: 1;
+        margin: 0 20px;
+    }
+
+    .schedule-subject {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 5px;
+    }
+
+    .schedule-class {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .schedule-status {
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .schedule-status.present {
+        background: rgba(0, 191, 99, 0.1);
+        color: var(--accent-color);
+    }
+
+    .schedule-status.pending {
+        background: rgba(247, 147, 32, 0.1);
+        color: var(--primary-color);
+    }
+
+    .schedule-status.starting {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .schedule-status.in-progress {
+        background: rgba(0, 191, 99, 0.1);
+        color: var(--accent-color);
+    }
+
+    .schedule-status.completed {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+    }
+
+    .schedule-status i {
+        margin-right: 5px;
+    }
+
+    .dashboard-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .dashboard-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-footer {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .toast-container {
+        z-index: 9999;
+    }
+
+    .schedule-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .schedule-actions .btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Weekly overview chart
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('weeklyChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+                    datasets: [{
+                        label: 'Taux de présence (%)',
+                        data: [96, 94, 98, 95, 97],
+                        backgroundColor: [
+                            'rgba(247, 147, 32, 0.8)',
+                            'rgba(0, 191, 99, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(247, 147, 32, 0.8)'
+                        ],
+                        borderColor: [
+                            '#f79320',
+                            '#00bf63',
+                            '#3b82f6',
+                            '#8b5cf6',
+                            '#f79320'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // Fonction pour démarrer l'appel
+    function startAttendance(coursId) {
+        if (coursId) {
+            // Afficher un indicateur de chargement
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Démarrage...';
+            button.disabled = true;
+            
+            // Mettre à jour le statut du cours
+            updateCourseStatus(coursId, 'starting');
+            
+            // Rediriger vers l'interface de scan QR code des élèves
+            setTimeout(() => {
+                window.location.href = `/enseignant/scan-qr-eleves/${coursId}/`;
+            }, 500);
+        } else {
+            showNotification('Veuillez sélectionner un cours pour démarrer l\'appel', 'warning');
+        }
+    }
+
+
+
+    // Fonction pour voir les détails d'un cours
+    function viewCourseDetails(coursId) {
+        // Créer une modal avec les détails du cours
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'courseModal';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Détails du Cours</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p>Chargement des détails...</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="button" class="btn btn-primary" onclick="startAttendance('${coursId}')">
+                            <i class="fas fa-camera me-1"></i>Démarrer l'appel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Afficher la modal
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+        
+        // Charger les détails du cours via AJAX
+        loadCourseDetails(coursId, modal);
+        
+        // Nettoyer la modal après fermeture
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal);
+        });
+    }
+
+    // Fonction pour charger les détails d'un cours
+    function loadCourseDetails(coursId, modal) {
+        // Simuler le chargement des détails (à remplacer par un appel AJAX réel)
+        setTimeout(() => {
+            const modalBody = modal.querySelector('.modal-body');
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle text-primary me-2"></i>Informations Générales</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Matière:</strong> Mathématiques</li>
+                            <li><strong>Classe:</strong> 6èmeA</li>
+                            <li><strong>Horaire:</strong> 08:00 - 09:00</li>
+                            <li><strong>Salle:</strong> Salle 1</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-users text-success me-2"></i>Élèves</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Total:</strong> 25 élèves</li>
+                            <li><strong>Présents hier:</strong> 24</li>
+                            <li><strong>Absents hier:</strong> 1</li>
+                            <li><strong>Taux présence:</strong> 96%</li>
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6><i class="fas fa-history text-info me-2"></i>Historique Récent</h6>
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="fas fa-calendar me-1"></i>
+                                Dernier cours: Hier - 24 présents, 1 absent (Marie Dubois)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }, 1000);
+    }
+
+    // Fonction pour mettre à jour le statut d'un cours
+    function updateCourseStatus(coursId, status) {
+        const statusElement = document.getElementById(`status-${coursId}`);
+        if (statusElement) {
+            const statusClasses = {
+                'starting': 'schedule-status starting',
+                'in-progress': 'schedule-status in-progress',
+                'completed': 'schedule-status completed'
+            };
+            
+            const statusTexts = {
+                'starting': '<i class="fas fa-play"></i> Démarrage...',
+                'in-progress': '<i class="fas fa-camera"></i> En cours',
+                'completed': '<i class="fas fa-check"></i> Terminé'
+            };
+            
+            statusElement.className = statusClasses[status] || 'schedule-status pending';
+            statusElement.innerHTML = statusTexts[status] || '<i class="fas fa-clock"></i> À venir';
+        }
+    }
+
+    // Fonction pour actualiser les statistiques
+    function refreshStats() {
+        // Afficher un indicateur de chargement
+        const cards = document.querySelectorAll('.dashboard-card');
+        cards.forEach(card => {
+            card.style.opacity = '0.7';
+        });
+        
+        // Simuler l'actualisation (à remplacer par un appel AJAX réel)
+        setTimeout(() => {
+            // Mettre à jour l'heure de dernière mise à jour
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Restaurer l'opacité
+            cards.forEach(card => {
+                card.style.opacity = '1';
+            });
+            
+            showNotification('Statistiques actualisées', 'success');
+        }, 1000);
+    }
+
+    // Fonction pour exporter les données
+    function exportData(format) {
+        showNotification(`Export ${format.toUpperCase()} en cours...`, 'info');
+        
+        // Simuler l'export (à remplacer par un appel AJAX réel)
+        setTimeout(() => {
+            showNotification(`Export ${format.toUpperCase()} terminé avec succès !`, 'success');
+        }, 2000);
+    }
+
+    // Fonction pour afficher les notifications
+    function showNotification(message, type = 'info') {
+        // Créer une notification toast
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'error' ? 'danger' : 'info'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'times-circle' : 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        // Ajouter la notification au conteneur
+        const toastContainer = document.getElementById('toast-container') || createToastContainer();
+        toastContainer.appendChild(toast);
+        
+        // Afficher la notification
+        const bootstrapToast = new bootstrap.Toast(toast);
+        bootstrapToast.show();
+        
+        // Supprimer la notification après fermeture
+        toast.addEventListener('hidden.bs.toast', () => {
+            toastContainer.removeChild(toast);
+        });
+    }
+
+    // Fonction pour créer le conteneur de notifications
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+        return container;
+    }
+</script>
+{% endblock %}

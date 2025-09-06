@@ -1,0 +1,559 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Emploi du Temps - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_course_management' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Gestion des cours
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link active" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Présences (vue globale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks des parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_notifications' %}" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Notifications envoyées
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export des registres
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        Paramètres système
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Emploi du Temps</h2>
+            <p class="text-muted mb-0">Gestion des plannings et horaires des classes</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                <i class="fas fa-plus me-2"></i>Nouveau cours
+            </button>
+            <button class="btn btn-primary" onclick="generateSchedule()">
+                <i class="fas fa-magic me-2"></i>Générer automatiquement
+            </button>
+            <button class="btn btn-outline-info" onclick="exportSchedule('pdf')">
+                <i class="fas fa-file-pdf me-2"></i>Export PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="dashboard-card mb-4">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <select class="form-select" id="classFilter">
+                <option value="">Toutes les classes</option>
+                <option value="6A">6èmeA</option>
+                <option value="5B">5èmeB</option>
+                <option value="4C">4èmeC</option>
+                <option value="3D">3èmeD</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="teacherFilter">
+                <option value="">Tous les enseignants</option>
+                <option value="martin">M. Martin</option>
+                <option value="dubois">Mme Dubois</option>
+                <option value="durand">M. Durand</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="dayFilter">
+                <option value="">Tous les jours</option>
+                <option value="lundi">Lundi</option>
+                <option value="mardi">Mardi</option>
+                <option value="mercredi">Mercredi</option>
+                <option value="jeudi">Jeudi</option>
+                <option value="vendredi">Vendredi</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100" onclick="applyScheduleFilters()">
+                <i class="fas fa-search me-2"></i>Filtrer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Statistics -->
+<div class="stats-grid mb-4">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Cours</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-clock"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalCourses">156</div>
+        <div class="card-label">Cours programmés</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Heures/Semaine</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-calendar-week"></i>
+            </div>
+        </div>
+        <div class="card-value" id="weeklyHours">26h</div>
+        <div class="card-label">Par classe</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Salles Utilisées</h3>
+            <div class="card-icon blue">
+                <i class="fas fa-door-open"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalRooms">12</div>
+        <div class="card-label">Salles actives</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Conflits</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+        </div>
+        <div class="card-value" id="conflicts">0</div>
+        <div class="card-label">Aucun conflit</div>
+    </div>
+</div>
+
+<!-- Weekly Schedule -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Emploi du Temps Hebdomadaire</h3>
+        <div class="card-icon green">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+    </div>
+    <div class="schedule-container">
+        <div class="schedule-header">
+            <div class="time-column">Heure</div>
+            <div class="day-column">Lundi</div>
+            <div class="day-column">Mardi</div>
+            <div class="day-column">Mercredi</div>
+            <div class="day-column">Jeudi</div>
+            <div class="day-column">Vendredi</div>
+        </div>
+
+        <div class="schedule-body">
+            <!-- 8h00-9h00 -->
+            <div class="schedule-row">
+                <div class="time-slot">8h00-9h00</div>
+                <div class="course-slot" data-course="math-6A">
+                    <div class="course-info">
+                        <strong>Mathématiques</strong><br>
+                        <small>6èmeA - M. Martin</small><br>
+                        <small>Salle 101</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('math-6A')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('math-6A')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="francais-5B">
+                    <div class="course-info">
+                        <strong>Français</strong><br>
+                        <small>5èmeB - Mme Dubois</small><br>
+                        <small>Salle 205</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('francais-5B')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('francais-5B')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="histoire-4C">
+                    <div class="course-info">
+                        <strong>Histoire</strong><br>
+                        <small>4èmeC - M. Durand</small><br>
+                        <small>Salle 103</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('histoire-4C')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('histoire-4C')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="sciences-3D">
+                    <div class="course-info">
+                        <strong>Sciences</strong><br>
+                        <small>3èmeD - Mme Rousseau</small><br>
+                        <small>Labo 1</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('sciences-3D')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('sciences-3D')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="anglais-6A">
+                    <div class="course-info">
+                        <strong>Anglais</strong><br>
+                        <small>6èmeA - Mme Smith</small><br>
+                        <small>Salle 201</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('anglais-6A')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('anglais-6A')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9h00-10h00 -->
+            <div class="schedule-row">
+                <div class="time-slot">9h00-10h00</div>
+                <div class="course-slot" data-course="francais-6A">
+                    <div class="course-info">
+                        <strong>Français</strong><br>
+                        <small>6èmeA - Mme Dubois</small><br>
+                        <small>Salle 101</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('francais-6A')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('francais-6A')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="math-5B">
+                    <div class="course-info">
+                        <strong>Mathématiques</strong><br>
+                        <small>5èmeB - M. Martin</small><br>
+                        <small>Salle 205</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('math-5B')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('math-5B')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="geographie-4C">
+                    <div class="course-info">
+                        <strong>Géographie</strong><br>
+                        <small>4èmeC - M. Durand</small><br>
+                        <small>Salle 103</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('geographie-4C')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('geographie-4C')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="math-3D">
+                    <div class="course-info">
+                        <strong>Mathématiques</strong><br>
+                        <small>3èmeD - M. Martin</small><br>
+                        <small>Salle 207</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('math-3D')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('math-3D')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="course-slot" data-course="sport-6A">
+                    <div class="course-info">
+                        <strong>Sport</strong><br>
+                        <small>6èmeA - M. Dupont</small><br>
+                        <small>Gymnase</small>
+                    </div>
+                    <div class="course-actions">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editCourse('sport-6A')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteCourse('sport-6A')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-container {
+        overflow-x: auto;
+    }
+
+    .schedule-header {
+        display: grid;
+        grid-template-columns: 120px repeat(5, 1fr);
+        gap: 1px;
+        background: #e9ecef;
+        border-radius: 8px 8px 0 0;
+        overflow: hidden;
+    }
+
+    .schedule-header>div {
+        padding: 15px;
+        text-align: center;
+        font-weight: 600;
+        background: #f8f9fa;
+        border-right: 1px solid #dee2e6;
+    }
+
+    .schedule-header>div:last-child {
+        border-right: none;
+    }
+
+    .schedule-body {
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .schedule-row {
+        display: grid;
+        grid-template-columns: 120px repeat(5, 1fr);
+        gap: 1px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .schedule-row:last-child {
+        border-bottom: none;
+    }
+
+    .time-slot {
+        padding: 15px;
+        background: #f8f9fa;
+        text-align: center;
+        font-weight: 600;
+        border-right: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .course-slot {
+        padding: 10px;
+        background: #fff;
+        border-right: 1px solid #dee2e6;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .course-slot:last-child {
+        border-right: none;
+    }
+
+    .course-info {
+        font-size: 0.9rem;
+    }
+
+    .course-actions {
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+        margin-top: 5px;
+    }
+
+    .course-slot:hover {
+        background: #f8f9fa;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .time-column,
+    .day-column {
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+        .schedule-container {
+            font-size: 0.8rem;
+        }
+
+        .schedule-header>div,
+        .time-slot,
+        .course-slot {
+            padding: 8px;
+        }
+
+        .course-info {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Gestion de la sidebar active
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-schedule');
+        }
+    });
+
+    // Appliquer les filtres de l'emploi du temps
+    function applyScheduleFilters() {
+        const classFilter = document.getElementById('classFilter').value;
+        const teacherFilter = document.getElementById('teacherFilter').value;
+        const dayFilter = document.getElementById('dayFilter').value;
+
+        console.log('Filtres appliqués:', { classFilter, teacherFilter, dayFilter });
+
+        // Logique de filtrage des cours
+        filterCourses(classFilter, teacherFilter, dayFilter);
+    }
+
+    // Filtrer les cours
+    function filterCourses(classFilter, teacherFilter, dayFilter) {
+        const courseSlots = document.querySelectorAll('.course-slot');
+
+        courseSlots.forEach(slot => {
+            let show = true;
+
+            if (classFilter && !slot.dataset.course.includes(classFilter)) {
+                show = false;
+            }
+
+            if (teacherFilter && !slot.querySelector('.course-info').textContent.includes(teacherFilter)) {
+                show = false;
+            }
+
+            slot.style.display = show ? 'flex' : 'none';
+        });
+    }
+
+    // Générer automatiquement l'emploi du temps
+    function generateSchedule() {
+        showNotification('Génération automatique de l\'emploi du temps en cours...', 'info');
+
+        setTimeout(() => {
+            showNotification('Emploi du temps généré avec succès !', 'success');
+        }, 3000);
+    }
+
+    // Éditer un cours
+    function editCourse(courseId) {
+        showNotification(`Modification du cours ${courseId}`, 'info');
+    }
+
+    // Supprimer un cours
+    function deleteCourse(courseId) {
+        if (confirm(`Êtes-vous sûr de vouloir supprimer ce cours ?`)) {
+            showNotification(`Cours ${courseId} supprimé`, 'success');
+        }
+    }
+
+    // Exporter l'emploi du temps
+    function exportSchedule(format) {
+        showNotification(`Export ${format.toUpperCase()} de l'emploi du temps en cours...`, 'info');
+
+        setTimeout(() => {
+            showNotification(`Export ${format.toUpperCase()} terminé !`, 'success');
+        }, 2000);
+    }
+
+    // Notification helper
+    function showNotification(message, type = 'info') {
+        const alertClass = `alert-${type}`;
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,398 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Élève - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="#" class="nav-link active">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-calendar-alt"></i>
+        Mon emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-clipboard-check"></i>
+        Mes présences
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-book"></i>
+        Mes matières
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-chart-line"></i>
+        Mes statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-bell"></i>
+        Mes notifications
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Tableau de bord Élève</h2>
+        <p class="text-muted mb-0">Bienvenue, {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="viewSchedule()">
+            <i class="fas fa-calendar me-2"></i>Voir mon planning
+        </button>
+        <button class="btn btn-outline-info" onclick="viewStats()">
+            <i class="fas fa-chart-bar me-2"></i>Mes statistiques
+        </button>
+    </div>
+</div>
+
+<!-- Student Overview -->
+<div class="student-overview mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">{{ user.get_full_name|default:"Élève" }}</h3>
+            <p class="text-muted mb-0">{{ student_class|default:"4èmeA" }} - {{ student_school|default:"Collège FaceTrack" }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="student-avatar">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Statistics -->
+<div class="stats-grid">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Présences Ce Mois</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-check-circle"></i>
+            </div>
+        </div>
+        <div class="card-value">98.5%</div>
+        <div class="card-label">Taux de présence</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Cours Aujourd'hui</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-calendar-day"></i>
+            </div>
+        </div>
+        <div class="card-value">6</div>
+        <div class="card-label">Cours programmés</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-title">Retards Ce Mois</div>
+        <div class="card-icon blue">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="card-value">1</div>
+        <div class="card-label">Retard signalé</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Matières Suivies</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+        <div class="card-value">8</div>
+        <div class="card-label">Matières actives</div>
+    </div>
+</div>
+
+<!-- Today's Schedule & Recent Activity -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-card">
+            <h3 class="chart-title mb-4">Emploi du Temps - Aujourd'hui</h3>
+            <div class="schedule-timeline">
+                <div class="schedule-item">
+                    <div class="schedule-time">08:00 - 09:00</div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">Mathématiques</div>
+                        <div class="schedule-class">M. Martin - Salle 12</div>
+                    </div>
+                    <div class="schedule-status present">
+                        <i class="fas fa-check-circle"></i> Présent
+                    </div>
+                </div>
+                
+                <div class="schedule-item">
+                    <div class="schedule-time">09:00 - 10:00</div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">Français</div>
+                        <div class="schedule-class">Mme Dubois - Salle 15</div>
+                    </div>
+                    <div class="schedule-status present">
+                        <i class="fas fa-check-circle"></i> Présent
+                    </div>
+                </div>
+                
+                <div class="schedule-item">
+                    <div class="schedule-time">10:15 - 11:15</div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">Histoire</div>
+                        <div class="schedule-class">M. Rousseau - Salle 8</div>
+                    </div>
+                    <div class="schedule-status pending">
+                        <i class="fas fa-clock"></i> À venir
+                    </div>
+                </div>
+                
+                <div class="schedule-item">
+                    <div class="schedule-time">13:30 - 14:30</div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">Sciences</div>
+                        <div class="schedule-class">Mme Moreau - Salle 10</div>
+                    </div>
+                    <div class="schedule-status pending">
+                        <i class="fas fa-clock"></i> À venir
+                    </div>
+                </div>
+                
+                <div class="schedule-item">
+                    <div class="schedule-time">14:30 - 15:30</div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">Anglais</div>
+                        <div class="schedule-class">M. Wilson - Salle 12</div>
+                    </div>
+                    <div class="schedule-status pending">
+                        <i class="fas fa-clock"></i> À venir
+                    </div>
+                </div>
+                
+                <div class="schedule-item">
+                    <div class="schedule-time">15:45 - 16:45</div>
+                    <div class="schedule-content">
+                        <div class="schedule-subject">Sport</div>
+                        <div class="schedule-class">M. Dupont - Gymnase</div>
+                    </div>
+                    <div class="schedule-status pending">
+                        <i class="fas fa-clock"></i> À venir
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="recent-activity">
+            <h3 class="chart-title mb-4">Activités Récentes</h3>
+            
+            <div class="activity-item">
+                <div class="activity-icon primary">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Présence confirmée - Mathématiques</div>
+                    <div class="activity-time">Aujourd'hui 08:00</div>
+                    <small class="text-success">M. Martin</small>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon accent">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Présence confirmée - Français</div>
+                    <div class="activity-time">Aujourd'hui 09:00</div>
+                    <small class="text-success">Mme Dubois</small>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon blue">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Nouvelle notification</div>
+                    <div class="activity-time">Hier 16:00</div>
+                    <small class="text-info">Devoir à rendre</small>
+                </div>
+            </div>
+            
+            <div class="activity-item">
+                <div class="activity-icon purple">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Statistiques mises à jour</div>
+                    <div class="activity-time">Hier 18:00</div>
+                    <small class="text-success">Taux: 98.5%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Overview Chart -->
+<div class="chart-card mt-4">
+    <h3 class="chart-title mb-4">Vue d'Ensemble de la Semaine</h3>
+    <canvas id="weeklyChart" height="100"></canvas>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.student-overview {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.student-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+    margin: 0 auto;
+}
+
+.schedule-timeline {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.schedule-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 15px;
+    background: var(--bg-light);
+}
+
+.schedule-time {
+    min-width: 120px;
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+}
+
+.schedule-content {
+    flex: 1;
+    margin: 0 20px;
+}
+
+.schedule-subject {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.schedule-class {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.schedule-status {
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.schedule-status.present {
+    background: rgba(0, 191, 99, 0.1);
+    color: var(--accent-color);
+}
+
+.schedule-status.pending {
+    background: rgba(247, 147, 32, 0.1);
+    color: var(--primary-color);
+}
+
+.schedule-status i {
+    margin-right: 5px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Weekly overview chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('weeklyChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+                datasets: [{
+                    label: 'Taux de présence (%)',
+                    data: [100, 95, 100, 98, 97],
+                    backgroundColor: [
+                        'rgba(0, 191, 99, 0.8)',
+                        'rgba(247, 147, 32, 0.8)',
+                        'rgba(0, 191, 99, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(139, 92, 246, 0.8)'
+                    ],
+                    borderColor: [
+                        '#00bf63',
+                        '#f79320',
+                        '#00bf63',
+                        '#3b82f6',
+                        '#8b5cf6'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+});
+
+function viewSchedule() {
+    showNotification('Ouverture de votre emploi du temps...', 'info');
+    // Implementation for schedule view
+}
+
+function viewStats() {
+    showNotification('Ouverture de vos statistiques...', 'info');
+    // Implementation for statistics view
+}
+</script>
+{% endblock %}

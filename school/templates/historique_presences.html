@@ -1,0 +1,535 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Historique des Présences - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'enseignant_dashboard' %}" class="nav-link active" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_classes' %}" class="nav-link" id="sidebar-classes">
+        <i class="fas fa-chalkboard"></i>
+        Mes classes
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_subjects' %}" class="nav-link" id="sidebar-subjects">
+        <i class="fas fa-book"></i>
+        Mes matières
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'liste_cours_enseignant' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-calendar-alt"></i>
+        Mes cours
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_attendance_today' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-camera"></i>
+        Appels (Scan QR)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'historique_presences' %}" class="nav-link" id="sidebar-history">
+        <i class="fas fa-history"></i>
+        Historique des présences
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Déconnexion
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Historique des Présences</h2>
+            <p class="text-muted mb-0">Consultation et analyse des présences</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="exportHistorique()">
+                <i class="fas fa-file-excel me-2"></i>Export Excel
+            </button>
+            <button class="btn btn-outline-success" onclick="generateReport()">
+                <i class="fas fa-chart-line me-2"></i>Rapport
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres -->
+<div class="dashboard-card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Filtres de recherche</h3>
+        <div class="card-icon blue">
+            <i class="fas fa-filter"></i>
+        </div>
+    </div>
+    <div class="card-content">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="date_debut" class="form-label">Date de début</label>
+                <input type="date" class="form-control" id="date_debut" name="date_debut"
+                    value="{{ filtres.date_debut|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_fin" class="form-label">Date de fin</label>
+                <input type="date" class="form-control" id="date_fin" name="date_fin"
+                    value="{{ filtres.date_fin|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="classe" class="form-label">Classe</label>
+                <select class="form-select" id="classe" name="classe">
+                    <option value="">Toutes</option>
+                    {% for classe in classes %}
+                    <option value="{{ classe.id }}" {% if filtres.classe_id == classe.id|stringformat:"s" %}selected{% endif %}>
+                        {{ classe.nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="matiere" class="form-label">Matière</label>
+                <select class="form-select" id="matiere" name="matiere">
+                    <option value="">Toutes</option>
+                    {% for matiere in matieres %}
+                    <option value="{{ matiere.id }}" {% if filtres.matiere_id == matiere.id|stringformat:"s" %}selected{% endif %}>
+                        {{ matiere.nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Filtrer
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Total Présences</h3>
+                <div class="card-icon primary">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="card-content text-center">
+                <div class="stat-value text-success">{{ page_obj.paginator.count }}</div>
+                <div class="stat-label">Enregistrements</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Taux de Présence</h3>
+                <div class="card-icon accent">
+                    <i class="fas fa-percentage"></i>
+                </div>
+            </div>
+            <div class="card-content text-center">
+                <div class="stat-value text-primary">85%</div>
+                <div class="stat-label">Moyenne</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Retards</h3>
+                <div class="card-icon warning">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+            <div class="card-content text-center">
+                <div class="stat-value text-warning">12%</div>
+                <div class="stat-label">Du total</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Absences</h3>
+                <div class="card-icon danger">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+            </div>
+            <div class="card-content text-center">
+                <div class="stat-value text-danger">3%</div>
+                <div class="stat-label">Du total</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des présences -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Détail des Présences</h3>
+        <div class="card-icon green">
+            <i class="fas fa-list"></i>
+        </div>
+    </div>
+
+    {% if page_obj %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Élève</th>
+                    <th>Classe</th>
+                    <th>Matière</th>
+                    <th>Statut</th>
+                    <th>Heure d'arrivée</th>
+                    <th>Méthode</th>
+                    <th>Confiance</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for presence in page_obj %}
+                <tr>
+                    <td>
+                        <div class="date-info">
+                            <div class="fw-bold">{{ presence.session_appel.cours.date|date:"d/m/Y" }}</div>
+                            <small class="text-muted">{{ presence.session_appel.cours.heure_debut|time:"H:i" }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="student-info">
+                            <div class="fw-bold">{{ presence.eleve.user.get_full_name }}</div>
+                            <small class="text-muted">{{ presence.eleve.matricule }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ presence.session_appel.cours.classe.nom }}</span>
+                    </td>
+                    <td>
+                        <div class="subject-info">
+                            <div class="fw-bold">{{ presence.session_appel.cours.matiere.nom }}</div>
+                            <small class="text-muted">{{ presence.session_appel.cours.matiere.code }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        {% if presence.statut == 'PRESENT' %}
+                        <span class="badge bg-success">Présent</span>
+                        {% elif presence.statut == 'RETARD' %}
+                        <span class="badge bg-warning">Retard</span>
+                        {% elif presence.statut == 'ABSENT' %}
+                        <span class="badge bg-danger">Absent</span>
+                        {% elif presence.statut == 'JUSTIFIE' %}
+                        <span class="badge bg-info">Justifié</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if presence.heure_arrivee %}
+                        <span class="text-success">{{ presence.heure_arrivee|time:"H:i" }}</span>
+                        {% else %}
+                        <span class="text-muted">--:--</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">{{ presence.get_methode_detection_display }}</span>
+                    </td>
+                    <td>
+                        {% if presence.niveau_confiance %}
+                        <div class="confidence-bar">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-success"
+                                    style="width: {{ presence.niveau_confiance|floatformat:0 }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ presence.niveau_confiance|floatformat:0 }}%</small>
+                        </div>
+                        {% else %}
+                        <span class="text-muted">--</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-info" onclick="viewDetails({{ presence.id }})"
+                                title="Voir détails">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="editPresence({{ presence.id }})"
+                                title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="exportPresence({{ presence.id }})"
+                                title="Exporter">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Navigation des présences" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page=1{% if filtres.date_debut %}&date_debut={{ filtres.date_debut }}{% endif %}{% if filtres.date_fin %}&date_fin={{ filtres.date_fin }}{% endif %}{% if filtres.classe_id %}&classe={{ filtres.classe_id }}{% endif %}{% if filtres.matiere_id %}&matiere={{ filtres.matiere_id }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}{% if filtres.date_debut %}&date_debut={{ filtres.date_debut }}{% endif %}{% if filtres.date_fin %}&date_fin={{ filtres.date_fin }}{% endif %}{% if filtres.classe_id %}&classe={{ filtres.classe_id }}{% endif %}{% if filtres.matiere_id %}&matiere={{ filtres.matiere_id }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
+                <a class="page-link"
+                    href="?page={{ num }}{% if filtres.date_debut %}&date_debut={{ filtres.date_debut }}{% endif %}{% if filtres.date_fin %}&date_fin={{ filtres.date_fin }}{% endif %}{% if filtres.classe_id %}&classe={{ filtres.classe_id }}{% endif %}{% if filtres.matiere_id %}&matiere={{ filtres.matiere_id }}{% endif %}">{{
+                    num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.next_page_number }}{% if filtres.date_debut %}&date_debut={{ filtres.date_debut }}{% endif %}{% if filtres.date_fin %}&date_fin={{ filtres.date_fin }}{% endif %}{% if filtres.classe_id %}&classe={{ filtres.classe_id }}{% endif %}{% if filtres.matiere_id %}&matiere={{ filtres.matiere_id }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link"
+                        href="?page={{ page_obj.paginator.num_pages }}{% if filtres.date_debut %}&date_debut={{ filtres.date_debut }}{% endif %}{% if filtres.date_fin %}&date_fin={{ filtres.date_fin }}{% endif %}{% if filtres.classe_id %}&classe={{ filtres.classe_id }}{% endif %}{% if filtres.matiere_id %}&matiere={{ filtres.matiere_id }}{% endif %}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">Aucune présence trouvée</h4>
+        <p class="text-muted">Aucune présence ne correspond aux critères de recherche.</p>
+        <button class="btn btn-primary" onclick="resetFilters()">
+            <i class="fas fa-refresh me-2"></i>Réinitialiser les filtres
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Graphiques et analyses -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Évolution des présences</h3>
+                <div class="card-icon purple">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <canvas id="evolutionChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3 class="card-title">Répartition par classe</h3>
+                <div class="card-icon orange">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+            </div>
+            <div class="card-content">
+                <canvas id="classeChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .date-info,
+    .student-info,
+    .subject-info {
+        line-height: 1.2;
+    }
+
+    .confidence-bar {
+        width: 80px;
+    }
+
+    .confidence-bar .progress {
+        margin-bottom: 5px;
+    }
+
+    .pagination .page-link {
+        color: var(--primary-color);
+        border-color: var(--border-color);
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .pagination .page-link:hover {
+        color: var(--primary-hover);
+        border-color: var(--primary-hover);
+    }
+
+    @media print {
+
+        .btn,
+        .page-header .d-flex:last-child,
+        .pagination {
+            display: none !important;
+        }
+
+        .dashboard-card {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Graphique d'évolution des présences
+    const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
+    const evolutionChart = new Chart(evolutionCtx, {
+        type: 'line',
+        data: {
+            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+            datasets: [{
+                label: 'Présents',
+                data: [85, 88, 92, 87, 90],
+                borderColor: '#00bf63',
+                backgroundColor: 'rgba(0, 191, 99, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Retards',
+                data: [10, 8, 5, 9, 7],
+                borderColor: '#f79320',
+                backgroundColor: 'rgba(247, 147, 32, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Absents',
+                data: [5, 4, 3, 4, 3],
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Graphique de répartition par classe
+    const classeCtx = document.getElementById('classeChart').getContext('2d');
+    const classeChart = new Chart(classeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['6ème A', '6ème B', '5ème A', '5ème B'],
+            datasets: [{
+                data: [25, 23, 28, 26],
+                backgroundColor: [
+                    '#f79320',
+                    '#00bf63',
+                    '#3b82f6',
+                    '#8b5cf6'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+
+    // Fonctions utilitaires
+    function viewDetails(presenceId) {
+        console.log('Voir détails de la présence:', presenceId);
+        // Ouvrir un modal avec les détails
+    }
+
+    function editPresence(presenceId) {
+        console.log('Modifier la présence:', presenceId);
+        // Ouvrir un modal d'édition
+    }
+
+    function exportPresence(presenceId) {
+        console.log('Exporter la présence:', presenceId);
+        // Télécharger le fichier
+    }
+
+    function exportHistorique() {
+        console.log('Exporter l\'historique');
+        // Télécharger le fichier Excel
+    }
+
+    function generateReport() {
+        console.log('Générer un rapport');
+        // Créer et télécharger un rapport PDF
+    }
+
+    function resetFilters() {
+        window.location.href = window.location.pathname;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Mes Matières - FaceTrack{% endblock %}
+
+{% block sidebar %}
+    {% include 'sidebar_teacher.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Mes Matières</h2>
+    {% if matieres %}
+    <div class="row">
+        {% for matiere in matieres %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ matiere.nom }}</h5>
+                    <p class="card-text">Coefficient : {{ matiere.coef }}</p>
+                    <p class="card-text">Description : {{ matiere.description|default:'-' }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">Aucune matière assignée.</div>
+    {% endif %}
+</div>
+{% endblock %}

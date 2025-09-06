@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification de Retard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #ffc107;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffc107;
+            margin-bottom: 10px;
+        }
+        .status-icon {
+            font-size: 48px;
+            color: #ffc107;
+            margin-bottom: 10px;
+        }
+        .student-info {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .course-info {
+            background-color: #fff3cd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+        .label {
+            font-weight: bold;
+            color: #555;
+        }
+        .value {
+            color: #333;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .highlight {
+            color: #856404;
+            font-weight: bold;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .delay-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">🎓 FaceTrack École</div>
+            <div class="status-icon">⏰</div>
+            <h1 style="color: #856404; margin: 0;">Retard Signalé</h1>
+            <p style="color: #666; margin: 10px 0 0 0;">Votre enfant est arrivé en retard en cours</p>
+        </div>
+
+        <div class="student-info">
+            <h3 style="margin-top: 0; color: #333;">Informations de l'Élève</h3>
+            <div class="info-row">
+                <span class="label">Nom :</span>
+                <span class="value highlight">{{ eleve_nom }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Classe :</span>
+                <span class="value">{{ cours_classe }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Heure d'arrivée :</span>
+                <span class="value">{{ presence_heure|default:"Non spécifiée" }}</span>
+            </div>
+            {% if retard_minutes %}
+            <div class="info-row">
+                <span class="label">Retard :</span>
+                <span class="value highlight">{{ retard_minutes }} minute{{ retard_minutes|pluralize }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="course-info">
+            <h3 style="margin-top: 0; color: #333;">Détails du Cours</h3>
+            <div class="info-row">
+                <span class="label">Matière :</span>
+                <span class="value highlight">{{ cours_matiere }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Date :</span>
+                <span class="value">{{ cours_date }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Horaire prévu :</span>
+                <span class="value">{{ cours_heure }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Salle :</span>
+                <span class="value">{{ cours_salle }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Enseignant :</span>
+                <span class="value">{{ enseignant_nom }}</span>
+            </div>
+        </div>
+
+        <div class="warning-box">
+            <p style="margin: 0; color: #856404;">
+                <strong>⏰ Retard :</strong> Votre enfant est arrivé en retard à ce cours. 
+                Bien qu'il soit maintenant présent, nous vous informons de cette situation.
+            </p>
+        </div>
+
+        <div class="delay-info">
+            <p style="margin: 0; color: #6c757d;">
+                <strong>📊 Informations :</strong> 
+                {% if retard_minutes %}
+                    Retard de {{ retard_minutes }} minute{{ retard_minutes|pluralize }} par rapport à l'horaire prévu.
+                {% else %}
+                    L'élève est arrivé après l'heure de début du cours.
+                {% endif %}
+            </p>
+        </div>
+
+        <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #6c757d;">
+                <strong>📞 Contact :</strong> Pour toute question concernant ce retard, 
+                n'hésitez pas à contacter l'établissement ou l'enseignant concerné.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p><strong>{{ ecole_nom }}</strong></p>
+            <p>📧 {{ ecole_email }}</p>
+            <p>📅 Notification envoyée le {{ notification_date }}</p>
+            <p style="font-size: 12px; color: #999;">
+                Cet email a été envoyé automatiquement. Veuillez ne pas y répondre directement.
+                Pour toute question, contactez l'établissement.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

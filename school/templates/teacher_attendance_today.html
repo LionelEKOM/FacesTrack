@@ -1,0 +1,56 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Appels du Jour - FaceTrack{% endblock %}
+
+{% block sidebar %}
+{% include 'sidebar_teacher.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Appels (Scan QR Code) - Aujourd'hui</h2>
+
+    <!-- Informations de débogage -->
+    <div class="alert alert-info">
+        <strong>Informations de débogage :</strong><br>
+        <small>
+            • Enseignant connecté : {{ enseignant.user.get_full_name }} ({{ enseignant.user.username }})<br>
+            • Date d'aujourd'hui : {{ today|date:"d/m/Y" }}<br>
+            • Nombre de cours trouvés : {{ cours_aujourd_hui|length }}
+        </small>
+    </div>
+
+    {% if cours_aujourd_hui %}
+    <div class="row">
+        {% for cours in cours_aujourd_hui %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ cours.matiere.nom }} - {{ cours.classe.nom }}</h5>
+                    <p class="card-text">Heure : {{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}
+                    </p>
+                    <p class="card-text">Salle : {{ cours.salle }}</p>
+                    <p class="card-text"><small class="text-muted">Date : {{ cours.date|date:"d/m/Y" }}</small></p>
+                    <a href="{% url 'qr_code_scan' cours.id %}" class="btn btn-primary">Démarrer l'appel</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <h5>⚠️ Aucun cours programmé aujourd'hui</h5>
+        <p>Voici les raisons possibles :</p>
+        <ul>
+            <li>Vous n'avez pas de cours assignés pour aujourd'hui</li>
+            <li>Les cours ont des dates futures</li>
+            <li>Les cours n'ont pas d'enseignant assigné</li>
+        </ul>
+        <hr>
+        <p><strong>Solution :</strong> Contactez l'administrateur pour qu'il crée et assigne des cours via le dashboard
+            admin.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

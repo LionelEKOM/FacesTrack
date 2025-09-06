@@ -1,0 +1,1378 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Gestion des Utilisateurs - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link active" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_course_management' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Gestion des cours
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Présences (vue globale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks des parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_notifications' %}" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Notifications envoyées
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export des registres
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        Paramètres système
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Gestion des Utilisateurs</h2>
+            <p class="text-muted mb-0">Administration des comptes élèves, enseignants et parents</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" onclick="openCustomModal()">
+                <i class="fas fa-plus me-2"></i>Nouvel utilisateur
+            </button>
+            <button class="btn btn-outline-primary" onclick="exportUsers('excel')">
+                <i class="fas fa-file-excel me-2"></i>Export Excel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="dashboard-card mb-4">
+    <div class="row g-3">
+        <div class="col-md-3">
+            <select class="form-select" id="roleFilter">
+                <option value="">Tous les rôles</option>
+                <option value="eleve">Élèves</option>
+                <option value="enseignant">Enseignants</option>
+                <option value="parent">Parents</option>
+                <option value="admin">Administrateurs</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="statusFilter">
+                <option value="">Tous les statuts</option>
+                <option value="active">Actif</option>
+                <option value="inactive">Inactif</option>
+                <option value="suspended">Suspendu</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <input type="text" class="form-control" id="searchUser" placeholder="Rechercher un utilisateur...">
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" onclick="applyFilters()">
+                <i class="fas fa-search me-2"></i>Filtrer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Users Statistics -->
+<div class="stats-grid mb-4">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Utilisateurs</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalUsers">0</div>
+        <div class="card-label">Utilisateurs inscrits</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Élèves</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalStudents">0</div>
+        <div class="card-label">Élèves actifs</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Enseignants</h3>
+            <div class="card-icon blue">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalTeachers">0</div>
+        <div class="card-label">Enseignants actifs</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Parents</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-user-friends"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalParents">0</div>
+        <div class="card-label">Parents connectés</div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Liste des Utilisateurs</h3>
+        <div class="card-icon green">
+            <i class="fas fa-list"></i>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover" id="usersTable">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Dernière connexion</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <!-- Les utilisateurs seront chargés dynamiquement -->
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div id="usersPagination" class="mt-4"></div>
+    </div>
+</div>
+
+<!-- Modal Ajout Utilisateur - Version Inline -->
+<div id="addUserModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-overlay" onclick="closeCustomModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title">
+                <i class="fas fa-user-plus me-2"></i>Nouvel Utilisateur
+            </h5>
+            <button type="button" class="custom-modal-close" onclick="closeCustomModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="addUserForm" onsubmit="submitNewUser(event)">
+            {% csrf_token %}
+            <div class="custom-modal-body">
+                <!-- Informations de base -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="firstName" class="form-label">Prénom *</label>
+                        <input type="text" class="form-control" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="lastName" class="form-label">Nom *</label>
+                        <input type="text" class="form-control" id="lastName" name="lastName" required>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="username" class="form-label">Nom d'utilisateur *</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="password" class="form-label">Mot de passe *</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button"
+                                onclick="togglePassword('password')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="passwordConfirm" class="form-label">Confirmer le mot de passe *</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="passwordConfirm" name="passwordConfirm"
+                                required>
+                            <button class="btn btn-outline-secondary" type="button"
+                                onclick="togglePassword('passwordConfirm')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="role" class="form-label">Rôle *</label>
+                        <select class="form-select" id="role" name="role" required onchange="handleRoleChange()">
+                            <option value="">Sélectionner un rôle</option>
+                            <option value="ADMIN">Administrateur</option>
+                            <option value="ENSEIGNANT">Enseignant</option>
+                            <option value="ELEVE">Élève</option>
+                            <option value="PARENT">Parent</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="status" class="form-label">Statut</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="active">Actif</option>
+                            <option value="inactive">Inactif</option>
+                            <option value="suspended">Suspendu</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Champs spécifiques au rôle -->
+                <div id="roleSpecificFields" style="display: none;">
+                    <!-- Champs pour Élève -->
+                    <div id="eleveFields" class="role-fields" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary">Informations Élève</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="classe" class="form-label">Classe *</label>
+                                <select class="form-select" id="classe" name="classe">
+                                    <option value="">Sélectionner une classe</option>
+                                    <option value="6A">6èmeA</option>
+                                    <option value="5B">5èmeB</option>
+                                    <option value="4C">4èmeC</option>
+                                    <option value="3D">3èmeD</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="dateNaissance" class="form-label">Date de naissance</label>
+                                <input type="date" class="form-control" id="dateNaissance" name="dateNaissance">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="photoReference" class="form-label">Photo de référence</label>
+                                <input type="file" class="form-control" id="photoReference" name="photoReference"
+                                    accept="image/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champs pour Enseignant -->
+                    <div id="enseignantFields" class="role-fields" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary">Informations Enseignant</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="specialite" class="form-label">Spécialité</label>
+                                <input type="text" class="form-control" id="specialite" name="specialite">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="dateEmbauche" class="form-label">Date d'embauche</label>
+                                <input type="date" class="form-control" id="dateEmbauche" name="dateEmbauche">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="telephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="telephone" name="telephone">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="adresse" class="form-label">Adresse</label>
+                                <textarea class="form-control" id="adresse" name="adresse" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champs pour Parent -->
+                    <div id="parentFields" class="role-fields" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary">Informations Parent</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="telephone" class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" id="telephone" name="telephone">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="adresse" class="form-label">Adresse</label>
+                                <textarea class="form-control" id="adresse" name="adresse" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCustomModal()">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-success" id="submitUserBtn">
+                    <i class="fas fa-save me-2"></i>Créer l'utilisateur
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Modification Utilisateur -->
+<div id="editUserModal" class="custom-modal" style="display: none;">
+    <div class="custom-modal-overlay" onclick="closeEditModal()"></div>
+    <div class="custom-modal-content">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title">
+                <i class="fas fa-user-edit me-2"></i>Modifier l'Utilisateur
+            </h5>
+            <button type="button" class="custom-modal-close" onclick="closeEditModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="editUserForm" onsubmit="submitEditUser(event)">
+            {% csrf_token %}
+            <div class="custom-modal-body">
+                <!-- Informations de base -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="editFirstName" class="form-label">Prénom *</label>
+                        <input type="text" class="form-control" id="editFirstName" name="firstName" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="editLastName" class="form-label">Nom *</label>
+                        <input type="text" class="form-control" id="editLastName" name="lastName" required>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="editEmail" class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="editEmail" name="email" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="editUsername" class="form-label">Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="editUsername" name="username" readonly>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="editTelephone" class="form-label">Téléphone</label>
+                        <input type="tel" class="form-control" id="editTelephone" name="telephone">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="editStatus" class="form-label">Statut</label>
+                        <select class="form-select" id="editStatus" name="status">
+                            <option value="active">Actif</option>
+                            <option value="inactive">Inactif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="editAdresse" class="form-label">Adresse</label>
+                        <textarea class="form-control" id="editAdresse" name="adresse" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- Champs spécifiques au rôle -->
+                <div id="editRoleSpecificFields" style="display: none;">
+                    <!-- Champs pour Élève -->
+                    <div id="editEleveFields" class="role-fields" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary">Informations Élève</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="editClasse" class="form-label">Classe</label>
+                                <select class="form-select" id="editClasse" name="classe">
+                                    <option value="">Sélectionner une classe</option>
+                                    <option value="6A">6èmeA</option>
+                                    <option value="6B">6èmeB</option>
+                                    <option value="5A">5èmeA</option>
+                                    <option value="5B">5èmeB</option>
+                                    <option value="4A">4èmeA</option>
+                                    <option value="4B">4èmeB</option>
+                                    <option value="3A">3èmeA</option>
+                                    <option value="3B">3èmeB</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDateNaissance" class="form-label">Date de naissance</label>
+                                <input type="date" class="form-control" id="editDateNaissance" name="dateNaissance">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champs pour Enseignant -->
+                    <div id="editEnseignantFields" class="role-fields" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary">Informations Enseignant</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="editSpecialite" class="form-label">Spécialité</label>
+                                <input type="text" class="form-control" id="editSpecialite" name="specialite">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDateEmbauche" class="form-label">Date d'embauche</label>
+                                <input type="date" class="form-control" id="editDateEmbauche" name="dateEmbauche">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champs pour Parent -->
+                    <div id="editParentFields" class="role-fields" style="display: none;">
+                        <hr>
+                        <h6 class="text-primary">Informations Parent</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="editProfession" class="form-label">Profession</label>
+                                <input type="text" class="form-control" id="editProfession" name="profession">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editLieuTravail" class="form-label">Lieu de travail</label>
+                                <input type="text" class="form-control" id="editLieuTravail" name="lieu_travail">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </button>
+                <button type="submit" class="btn btn-primary" id="submitEditBtn">
+                    <i class="fas fa-save me-2"></i>Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Styles CSS pour la modal personnalisée -->
+<style>
+    /* Modal personnalisée */
+    .custom-modal {
+        position: fixed;
+        top: -15%;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 999999;
+        display: none;
+    }
+
+    .custom-modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+    }
+
+    .custom-modal-content {
+        position: absolute;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 800px;
+        max-height: 85vh;
+        overflow-y: auto;
+        animation: modalSlideIn 0.3s ease-out;
+        /* Ajustement du centrage vertical */
+        margin-top: -5vh;
+    }
+
+    /* Alternative de centrage si nécessaire */
+    .custom-modal-content.centered {
+        top: 40%;
+        transform: translate(-50%, -50%);
+    }
+
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+
+    .custom-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        border-bottom: 1px solid #e9ecef;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px 12px 0 0;
+    }
+
+    .custom-modal-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .custom-modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-modal-close:hover {
+        background-color: #f8f9fa;
+        color: #dc3545;
+        transform: scale(1.1);
+    }
+
+    .custom-modal-body {
+        padding: 25px;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .custom-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 20px 25px;
+        border-top: 1px solid #e9ecef;
+        background-color: #f8f9fa;
+        border-radius: 0 0 12px 12px;
+    }
+
+    /* Assurer que tous les éléments de la modal sont interactifs */
+    .custom-modal * {
+        pointer-events: auto !important;
+        user-select: auto !important;
+        -webkit-user-select: auto !important;
+        -moz-user-select: auto !important;
+        -ms-user-select: auto !important;
+    }
+
+    /* Styles spécifiques pour les champs de formulaire */
+    .custom-modal input,
+    .custom-modal select,
+    .custom-modal textarea {
+        background-color: white !important;
+        color: #333 !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+        padding: 0.375rem 0.75rem !important;
+        font-size: 1rem !important;
+        line-height: 1.5 !important;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+        pointer-events: auto !important;
+        cursor: text !important;
+    }
+
+    .custom-modal input:focus,
+    .custom-modal select:focus,
+    .custom-modal textarea:focus {
+        border-color: #86b7fe !important;
+        outline: 0 !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+
+    .custom-modal button {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+
+    .custom-modal label {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        color: #333 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .custom-modal-content {
+            width: 95%;
+            max-height: 95vh;
+        }
+
+        .custom-modal-body {
+            padding: 20px;
+        }
+
+        .custom-modal-header,
+        .custom-modal-footer {
+            padding: 15px 20px;
+        }
+    }
+
+    /* Styles pour les photos des utilisateurs */
+    .user-photo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+    }
+
+    .user-photo-img {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 50% !important;
+        object-fit: cover !important;
+        border: 2px solid #e9ecef;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-photo .fa-user-circle {
+        font-size: 2rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Gestion de la sidebar active
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-users');
+        }
+
+        // Charger les utilisateurs et statistiques
+        loadUsers();
+
+        // Ajouter les écouteurs d'événements pour les filtres
+        document.getElementById('roleFilter').addEventListener('change', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+        // Recherche en temps réel (avec délai)
+        let searchTimeout;
+        document.getElementById('searchUser').addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilters, 500); // Délai de 500ms
+        });
+
+        // Test de la modal personnalisée
+        console.log('Modal personnalisée test:', {
+            modal: document.getElementById('addUserModal'),
+            button: document.querySelector('button[onclick="openCustomModal()"]')
+        });
+
+    });
+
+    // Charger les utilisateurs
+    function loadUsers(page = 1) {
+        // Afficher un indicateur de chargement
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></td></tr>';
+
+        // Récupérer les filtres actuels
+        const roleFilter = document.getElementById('roleFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        const searchQuery = document.getElementById('searchUser').value;
+
+        // Construire l'URL avec les paramètres
+        const params = new URLSearchParams({
+            page: page,
+            per_page: 10
+        });
+
+        if (roleFilter) params.append('role', roleFilter);
+        if (statusFilter) params.append('status', statusFilter);
+        if (searchQuery) params.append('search', searchQuery);
+
+        // Appeler l'API
+        fetch(`{% url 'admin_get_users' %}?${params.toString()}`, {
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayUsers(data.users);
+                    updateUserStats(data.stats);
+                    updatePagination(data.pagination);
+                } else {
+                    showNotification(data.message, 'error');
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur lors du chargement des utilisateurs</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors du chargement des utilisateurs', 'error');
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erreur de connexion</td></tr>';
+            });
+    }
+
+    // Afficher les utilisateurs
+    function displayUsers(users) {
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Aucun utilisateur trouvé</td></tr>';
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+
+            // Déterminer la photo à afficher
+            let photoHTML = '';
+            if (user.role === 'ELEVE' && user.photo_reference) {
+                photoHTML = `<img src="${user.photo_reference}" alt="Photo de ${user.first_name}" class="user-photo-img" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">`;
+            } else {
+                photoHTML = `<i class="fas fa-user-circle fa-2x text-muted"></i>`;
+            }
+
+            row.innerHTML = `
+                <td>
+                    <div class="user-photo">
+                        ${photoHTML}
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        <strong>${user.first_name} ${user.last_name}</strong>
+                        <br><small class="text-muted">@${user.username}</small>
+                    </div>
+                </td>
+                <td>${user.email}</td>
+                <td><span class="badge bg-${getRoleColor(user.role)}">${getRoleLabel(user.role)}</span></td>
+                <td><span class="badge bg-${getStatusColor(user.status)}">${getStatusLabel(user.status)}</span></td>
+                <td>
+                    <small>Inscrit: ${user.date_joined}</small><br>
+                    <small>Dernière connexion: ${user.last_login}</small>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editUser(${user.id})" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-${user.status === 'active' ? 'warning' : 'success'}" 
+                                onclick="toggleUserStatus(${user.id})" title="${user.status === 'active' ? 'Désactiver' : 'Activer'}">
+                            <i class="fas fa-${user.status === 'active' ? 'pause' : 'play'}"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Obtenir la couleur du rôle
+    function getRoleColor(role) {
+        const colors = {
+            'eleve': 'success',
+            'enseignant': 'primary',
+            'parent': 'info',
+            'admin': 'danger'
+        };
+        return colors[role] || 'secondary';
+    }
+
+    // Obtenir le label du rôle
+    function getRoleLabel(role) {
+        const labels = {
+            'eleve': 'Élève',
+            'enseignant': 'Enseignant',
+            'parent': 'Parent',
+            'admin': 'Administrateur'
+        };
+        return labels[role] || role;
+    }
+
+    // Obtenir la couleur du statut
+    function getStatusColor(status) {
+        const colors = {
+            'active': 'success',
+            'inactive': 'secondary',
+            'suspended': 'warning'
+        };
+        return colors[status] || 'secondary';
+    }
+
+    // Obtenir le label du statut
+    function getStatusLabel(status) {
+        const labels = {
+            'active': 'Actif',
+            'inactive': 'Inactif',
+            'suspended': 'Suspendu'
+        };
+        return labels[status] || status;
+    }
+
+    // Mettre à jour les statistiques
+    function updateUserStats(stats) {
+        document.getElementById('totalUsers').textContent = stats.total_users;
+        document.getElementById('totalStudents').textContent = stats.total_students;
+        document.getElementById('totalTeachers').textContent = stats.total_teachers;
+        document.getElementById('totalParents').textContent = stats.total_parents;
+    }
+
+    // Mettre à jour la pagination
+    function updatePagination(pagination) {
+        const paginationContainer = document.getElementById('usersPagination');
+        if (!paginationContainer) return;
+
+        let paginationHTML = '';
+
+        if (pagination.total_pages > 1) {
+            paginationHTML = '<nav aria-label="Pagination des utilisateurs"><ul class="pagination justify-content-center">';
+
+            // Bouton précédent
+            if (pagination.has_previous) {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadUsers(${pagination.previous_page})">Précédent</a></li>`;
+            } else {
+                paginationHTML += '<li class="page-item disabled"><span class="page-link">Précédent</span></li>';
+            }
+
+            // Pages
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                if (i === pagination.current_page) {
+                    paginationHTML += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                } else {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadUsers(${i})">${i}</a></li>`;
+                }
+            }
+
+            // Bouton suivant
+            if (pagination.has_next) {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadUsers(${pagination.next_page})">Suivant</a></li>`;
+            } else {
+                paginationHTML += '<li class="page-item disabled"><span class="page-link">Suivant</span></li>';
+            }
+
+            paginationHTML += '</ul></nav>';
+
+            // Informations sur la pagination
+            paginationContainer.innerHTML = paginationHTML;
+        } else {
+            paginationContainer.innerHTML = ''; // Masquer la pagination si une seule page
+        }
+    }
+
+    // Appliquer les filtres
+    function applyFilters() {
+        const role = document.getElementById('roleFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const search = document.getElementById('searchUser').value;
+
+        // Logique de filtrage
+        console.log('Filtres appliqués:', { role, status, search });
+
+        // Recharger les utilisateurs avec les nouveaux filtres (page 1)
+        loadUsers(1);
+    }
+
+    // Fonctions d'action
+    function editUser(userId) {
+        // Récupérer les détails de l'utilisateur
+        fetch(`{% url 'admin_get_user_details' 0 %}`.replace('0', userId), {
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    populateEditForm(data.user);
+                    openEditModal();
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la récupération des détails', 'error');
+            });
+    }
+
+    // Remplir le formulaire de modification
+    function populateEditForm(user) {
+        // Informations de base
+        document.getElementById('editFirstName').value = user.first_name;
+        document.getElementById('editLastName').value = user.last_name;
+        document.getElementById('editEmail').value = user.email;
+        document.getElementById('editUsername').value = user.username;
+        document.getElementById('editTelephone').value = user.telephone;
+        document.getElementById('editAdresse').value = user.adresse;
+        document.getElementById('editStatus').value = user.status;
+
+        // Masquer tous les champs spécifiques au rôle
+        document.getElementById('editRoleSpecificFields').style.display = 'none';
+        document.getElementById('editEleveFields').style.display = 'none';
+        document.getElementById('editEnseignantFields').style.display = 'none';
+        document.getElementById('editParentFields').style.display = 'none';
+
+        // Afficher les champs selon le rôle
+        if (user.role === 'ELEVE') {
+            document.getElementById('editRoleSpecificFields').style.display = 'block';
+            document.getElementById('editEleveFields').style.display = 'block';
+            if (user.classe) document.getElementById('editClasse').value = user.classe;
+            if (user.date_naissance) document.getElementById('editDateNaissance').value = user.date_naissance;
+        } else if (user.role === 'ENSEIGNANT') {
+            document.getElementById('editRoleSpecificFields').style.display = 'block';
+            document.getElementById('editEnseignantFields').style.display = 'block';
+            if (user.specialite) document.getElementById('editSpecialite').value = user.specialite;
+            if (user.date_embauche) document.getElementById('editDateEmbauche').value = user.date_embauche;
+        } else if (user.role === 'PARENT') {
+            document.getElementById('editRoleSpecificFields').style.display = 'block';
+            document.getElementById('editParentFields').style.display = 'block';
+            if (user.profession) document.getElementById('editProfession').value = user.profession;
+            if (user.lieu_travail) document.getElementById('editLieuTravail').value = user.lieu_travail;
+        }
+
+        // Stocker l'ID de l'utilisateur pour la modification
+        document.getElementById('editUserForm').dataset.userId = user.id;
+    }
+
+    // Ouvrir la modal de modification
+    function openEditModal() {
+        const modal = document.getElementById('editUserModal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    // Fermer la modal de modification
+    function closeEditModal() {
+        const modal = document.getElementById('editUserModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            // Réinitialiser le formulaire
+            document.getElementById('editUserForm').reset();
+        }
+    }
+
+    // Soumettre la modification
+    function submitEditUser(event) {
+        event.preventDefault();
+
+        const userId = document.getElementById('editUserForm').dataset.userId;
+        if (!userId) {
+            showNotification('ID utilisateur manquant', 'error');
+            return;
+        }
+
+        const formData = new FormData(event.target);
+
+        // Désactiver le bouton de soumission
+        const submitBtn = document.getElementById('submitEditBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Modification en cours...';
+
+        // Appeler l'API Django
+        fetch(`{% url 'admin_update_user' 0 %}`.replace('0', userId), {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    closeEditModal();
+                    // Recharger la liste des utilisateurs
+                    loadUsers(1);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la modification', 'error');
+            })
+            .finally(() => {
+                // Réactiver le bouton
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Enregistrer les modifications';
+            });
+    }
+
+    function toggleUserStatus(userId) {
+        if (!confirm('Êtes-vous sûr de vouloir modifier le statut de cet utilisateur ?')) {
+            return;
+        }
+
+        fetch(`{% url 'admin_toggle_user_status' 0 %}`.replace('0', userId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    // Recharger la liste des utilisateurs
+                    loadUsers(1);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la modification du statut', 'error');
+            });
+    }
+
+    function deleteUser(userId) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.')) {
+            return;
+        }
+
+        fetch(`{% url 'admin_delete_user' 0 %}`.replace('0', userId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+                    // Recharger la liste des utilisateurs
+                    loadUsers(1);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la suppression', 'error');
+            });
+    }
+
+    function exportUsers(format) {
+        showNotification(`Export ${format.toUpperCase()} des utilisateurs en cours...`, 'info');
+        setTimeout(() => {
+            showNotification(`Export ${format.toUpperCase()} terminé !`, 'success');
+        }, 2000);
+    }
+
+    // Notification helper
+    function showNotification(message, type = 'info') {
+        const alertClass = `alert-${type}`;
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // ========================================
+    // FONCTIONS POUR LE MODAL NOUVEL UTILISATEUR
+    // ========================================
+
+
+
+    // Gérer le changement de rôle
+    function handleRoleChange() {
+        const role = document.getElementById('role').value;
+        const roleSpecificFields = document.getElementById('roleSpecificFields');
+        const eleveFields = document.getElementById('eleveFields');
+        const enseignantFields = document.getElementById('enseignantFields');
+        const parentFields = document.getElementById('parentFields');
+
+        // Masquer tous les champs spécifiques
+        eleveFields.style.display = 'none';
+        enseignantFields.style.display = 'none';
+        parentFields.style.display = 'none';
+
+        // Afficher les champs selon le rôle sélectionné
+        if (role === 'ELEVE') {
+            roleSpecificFields.style.display = 'block';
+            eleveFields.style.display = 'block';
+            // Rendre la classe obligatoire pour les élèves
+            document.getElementById('classe').required = true;
+        } else if (role === 'ENSEIGNANT') {
+            roleSpecificFields.style.display = 'block';
+            enseignantFields.style.display = 'block';
+            document.getElementById('classe').required = false;
+        } else if (role === 'PARENT') {
+            roleSpecificFields.style.display = 'block';
+            parentFields.style.display = 'block';
+            document.getElementById('classe').required = false;
+        } else {
+            roleSpecificFields.style.display = 'none';
+            document.getElementById('classe').required = false;
+        }
+    }
+
+    // Basculer la visibilité du mot de passe
+    function togglePassword(fieldId) {
+        const field = document.getElementById(fieldId);
+        const button = field.nextElementSibling;
+        const icon = button.querySelector('i');
+
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    // Valider le formulaire
+    function validateForm() {
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('passwordConfirm').value;
+        const role = document.getElementById('role').value;
+
+        // Vérifier que les mots de passe correspondent
+        if (password !== passwordConfirm) {
+            showNotification('Les mots de passe ne correspondent pas', 'error');
+            return false;
+        }
+
+        // Vérifier la longueur du mot de passe
+        if (password.length < 8) {
+            showNotification('Le mot de passe doit contenir au moins 8 caractères', 'error');
+            return false;
+        }
+
+        // Vérifier que le rôle est sélectionné
+        if (!role) {
+            showNotification('Veuillez sélectionner un rôle', 'error');
+            return false;
+        }
+
+        // Vérifications spécifiques selon le rôle
+        if (role === 'ELEVE') {
+            const classe = document.getElementById('classe').value;
+            if (!classe) {
+                showNotification('Veuillez sélectionner une classe pour l\'élève', 'error');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Soumettre le formulaire de nouvel utilisateur
+    function submitNewUser(event) {
+        event.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
+        // Récupérer les données du formulaire
+        const formData = new FormData(event.target);
+
+        // Désactiver le bouton de soumission
+        const submitBtn = document.getElementById('submitUserBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Création en cours...';
+
+        // Appeler l'API Django
+        fetch('{% url "admin_create_user" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(data.message, 'success');
+
+                    // Réinitialiser le formulaire
+                    document.getElementById('addUserForm').reset();
+
+                    // Masquer le modal
+                    closeCustomModal();
+
+                    // Recharger la liste des utilisateurs et les statistiques
+                    loadUsers(1);
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showNotification('Erreur lors de la création de l\'utilisateur', 'error');
+            })
+            .finally(() => {
+                // Réactiver le bouton
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Créer l\'utilisateur';
+            });
+    }
+
+    // Gérer l'ouverture et la fermeture de la modal personnalisée
+    function openCustomModal() {
+        const modal = document.getElementById('addUserModal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Empêcher le défilement du contenu
+            // Forcer l'interactivité
+            forceModalInteractivity();
+        }
+    }
+
+    function closeCustomModal() {
+        const modal = document.getElementById('addUserModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Réactiver le défilement
+            // Réinitialiser le formulaire
+            const form = document.getElementById('addUserForm');
+            if (form) form.reset();
+
+            // Masquer tous les champs spécifiques au rôle
+            const roleSpecificFields = document.getElementById('roleSpecificFields');
+            const eleveFields = document.getElementById('eleveFields');
+            const enseignantFields = document.getElementById('enseignantFields');
+            const parentFields = document.getElementById('parentFields');
+
+            if (roleSpecificFields) roleSpecificFields.style.display = 'none';
+            if (eleveFields) eleveFields.style.display = 'none';
+            if (enseignantFields) enseignantFields.style.display = 'none';
+            if (parentFields) parentFields.style.display = 'none';
+
+            // Réactiver le bouton de soumission
+            const submitBtn = document.getElementById('submitUserBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Créer l\'utilisateur';
+            }
+        }
+    }
+
+    // Fonction pour forcer l'interactivité de la modal
+    function forceModalInteractivity() {
+        const modal = document.getElementById('addUserModal');
+        if (!modal) return;
+
+        // Forcer les pointer-events sur tous les éléments
+        const allElements = modal.querySelectorAll('*');
+        allElements.forEach(element => {
+            element.style.pointerEvents = 'auto';
+            element.style.userSelect = 'auto';
+            element.style.webkitUserSelect = 'auto';
+            element.style.mozUserSelect = 'auto';
+            element.style.msUserSelect = 'auto';
+        });
+
+        // Forcer spécifiquement sur les champs de formulaire
+        const formElements = modal.querySelectorAll('input, select, textarea, button, label');
+        formElements.forEach(element => {
+            element.style.pointerEvents = 'auto';
+            element.style.cursor = 'auto';
+            element.removeAttribute('disabled');
+            element.removeAttribute('readonly');
+        });
+
+        console.log('Interactivité forcée sur', allElements.length, 'éléments');
+    }
+
+    // Fonction pour récupérer le token CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

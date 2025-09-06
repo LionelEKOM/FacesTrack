@@ -1,0 +1,365 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Présences (Vue Globale) - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        Gestion des utilisateurs
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link active" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Présences (vue globale)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistiques
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks des parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_notifications' %}" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Notifications envoyées
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export des registres
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        Paramètres système
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="mb-1">Présences (Vue Globale)</h2>
+            <p class="text-muted mb-0">Suivi des présences de toutes les classes</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success" onclick="exportAttendance('excel')">
+                <i class="fas fa-file-excel me-2"></i>Export Excel
+            </button>
+            <button class="btn btn-primary" onclick="exportAttendance('pdf')">
+                <i class="fas fa-file-pdf me-2"></i>Export PDF
+            </button>
+            <button class="btn btn-outline-info" onclick="refreshData()">
+                <i class="fas fa-sync-alt me-2"></i>Actualiser
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="dashboard-card mb-4">
+    <div class="row g-3">
+        <div class="col-md-2">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="dateFilter" value="{{ today|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Classe</label>
+            <select class="form-select" id="classFilter">
+                <option value="">Toutes</option>
+                <option value="6A">6èmeA</option>
+                <option value="5B">5èmeB</option>
+                <option value="4C">4èmeC</option>
+                <option value="3D">3èmeD</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Matière</label>
+            <select class="form-select" id="subjectFilter">
+                <option value="">Toutes</option>
+                <option value="math">Mathématiques</option>
+                <option value="francais">Français</option>
+                <option value="histoire">Histoire</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Statut</label>
+            <select class="form-select" id="statusFilter">
+                <option value="">Tous</option>
+                <option value="present">Présent</option>
+                <option value="absent">Absent</option>
+                <option value="late">Retard</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-primary w-100" onclick="applyFilters()">
+                <i class="fas fa-search me-2"></i>Filtrer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Summary -->
+<div class="stats-grid mb-4">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Total Élèves</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="card-value" id="totalStudents">{{ attendance_summary.total_students }}</div>
+        <div class="card-label">Élèves inscrits</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Présents Aujourd'hui</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-check-circle"></i>
+            </div>
+        </div>
+        <div class="card-value text-success" id="presentToday">{{ attendance_summary.present_today }}</div>
+        <div class="card-label">Élèves présents</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Absents Aujourd'hui</h3>
+            <div class="card-icon blue">
+                <i class="fas fa-times-circle"></i>
+            </div>
+        </div>
+        <div class="card-value text-danger" id="absentToday">{{ attendance_summary.absent_today }}</div>
+        <div class="card-label">Élèves absents</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Taux de Présence</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-percentage"></i>
+            </div>
+        </div>
+        <div class="card-value text-info" id="attendanceRate">{{ attendance_summary.attendance_rate }}%</div>
+        <div class="card-label">Taux global</div>
+    </div>
+</div>
+
+<!-- Attendance Chart -->
+<div class="dashboard-card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Évolution des Présences (Ce Mois)</h3>
+        <div class="card-icon green">
+            <i class="fas fa-chart-line"></i>
+        </div>
+    </div>
+    <div class="card-content">
+        <canvas id="attendanceChart" height="100"></canvas>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">Détail des Présences</h3>
+        <div class="card-icon info">
+            <i class="fas fa-table"></i>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover" id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>Classe</th>
+                    <th>Matière</th>
+                    <th>Enseignant</th>
+                    <th>Horaire</th>
+                    <th>Effectif</th>
+                    <th>Présents</th>
+                    <th>Absents</th>
+                    <th>Retards</th>
+                    <th>Taux</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="attendanceTableBody">
+                <tr>
+                    <td><strong>6èmeA</strong></td>
+                    <td>Mathématiques</td>
+                    <td>M. Martin</td>
+                    <td>8h00-9h00</td>
+                    <td>28</td>
+                    <td><span class="badge bg-success">26</span></td>
+                    <td><span class="badge bg-danger">2</span></td>
+                    <td><span class="badge bg-warning">0</span></td>
+                    <td><span class="text-success">92.9%</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails('6A', 'math')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>5èmeB</strong></td>
+                    <td>Français</td>
+                    <td>Mme Dubois</td>
+                    <td>9h00-10h00</td>
+                    <td>26</td>
+                    <td><span class="badge bg-success">24</span></td>
+                    <td><span class="badge bg-danger">1</span></td>
+                    <td><span class="badge bg-warning">1</span></td>
+                    <td><span class="text-success">96.2%</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" onclick="viewDetails('5B', 'francais')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Gestion de la sidebar active
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-attendance');
+        }
+        initAttendanceChart();
+    });
+
+    // Initialiser le graphique des présences
+    function initAttendanceChart() {
+        const ctx = document.getElementById('attendanceChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+                    datasets: [{
+                        label: 'Taux de présence (%)',
+                        data: [92, 94, 96, 95],
+                        borderColor: '#f79320',
+                        backgroundColor: 'rgba(247, 147, 32, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Appliquer les filtres
+    function applyFilters() {
+        const date = document.getElementById('dateFilter').value;
+        const classFilter = document.getElementById('classFilter').value;
+        const subjectFilter = document.getElementById('subjectFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+
+        console.log('Filtres appliqués:', { date, classFilter, subjectFilter, statusFilter });
+
+        // Logique de filtrage
+        filterAttendanceData(date, classFilter, subjectFilter, statusFilter);
+    }
+
+    // Filtrer les données de présence
+    function filterAttendanceData(date, classFilter, subjectFilter, statusFilter) {
+        // Simulation de filtrage
+        showNotification('Filtrage des données en cours...', 'info');
+
+        setTimeout(() => {
+            showNotification('Données filtrées avec succès !', 'success');
+        }, 1000);
+    }
+
+    // Voir les détails d'une classe
+    function viewDetails(classId, subject) {
+        showNotification(`Affichage des détails pour ${classId} - ${subject}`, 'info');
+    }
+
+    // Exporter les données de présence
+    function exportAttendance(format) {
+        showNotification(`Export ${format.toUpperCase()} des présences en cours...`, 'info');
+
+        setTimeout(() => {
+            showNotification(`Export ${format.toUpperCase()} terminé !`, 'success');
+        }, 2000);
+    }
+
+    // Actualiser les données
+    function refreshData() {
+        showNotification('Actualisation des données en cours...', 'info');
+
+        setTimeout(() => {
+            showNotification('Données actualisées !', 'success');
+        }, 1500);
+    }
+
+    // Notification helper
+    function showNotification(message, type = 'info') {
+        const alertClass = `alert-${type}`;
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,439 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Parent - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="#" class="nav-link active">
+        <i class="fas fa-tachometer-alt"></i>
+        Tableau de bord
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-clipboard-check"></i>
+        Présences de mon enfant
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-calendar-alt"></i>
+        Emploi du temps
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-bell"></i>
+        Notifications (absences/retards)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-comments"></i>
+        Feedback (envoyer/répondre)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-download"></i>
+        Télécharger le registre individuel
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Tableau de bord Parent</h2>
+        <p class="text-muted mb-0">Suivi de {{ child_name|default:"votre enfant" }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="sendFeedback()">
+            <i class="fas fa-comment me-2"></i>Envoyer un feedback
+        </button>
+        <button class="btn btn-outline-success" onclick="downloadReport()">
+            <i class="fas fa-download me-2"></i>Télécharger rapport
+        </button>
+    </div>
+</div>
+
+<!-- Child Overview -->
+<div class="child-overview mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">{{ child_name|default:"Marie Dubois" }}</h3>
+            <p class="text-muted mb-0">{{ child_class|default:"4èmeA" }} - {{ child_school|default:"Collège FaceTrack"
+                }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="child-avatar">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Statistics -->
+<div class="stats-grid">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Absences Ce Mois</h3>
+            <div class="card-icon primary">
+                <i class="fas fa-user-times"></i>
+            </div>
+        </div>
+        <div class="card-value">2</div>
+        <div class="card-label">Jours d'absence</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Retards Cumulés</h3>
+            <div class="card-icon accent">
+                <i class="fas fa-clock"></i>
+            </div>
+        </div>
+        <div class="card-value">3</div>
+        <div class="card-label">Retards ce mois</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Taux de Présence</h3>
+            <div class="card-icon blue">
+                <i class="fas fa-percentage"></i>
+            </div>
+        </div>
+        <div class="card-value">97.8%</div>
+        <div class="card-label">Ce mois</div>
+    </div>
+
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3 class="card-title">Cours Suivis</h3>
+            <div class="card-icon purple">
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+        <div class="card-value">156</div>
+        <div class="card-label">Cours ce mois</div>
+    </div>
+</div>
+
+<!-- Charts & Schedule Section -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-card">
+            <h3 class="chart-title mb-4">Évolution des Présences/Absences</h3>
+            <canvas id="attendanceChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="chart-card">
+            <h3 class="chart-title mb-4">Emploi du Temps - Cette Semaine</h3>
+            <div class="weekly-schedule">
+                <div class="schedule-day">
+                    <div class="day-header">Lundi</div>
+                    <div class="day-subjects">
+                        <div class="subject-item">
+                            <span class="subject-name">Mathématiques</span>
+                            <span class="subject-time">08:00-09:00</span>
+                        </div>
+                        <div class="subject-item">
+                            <span class="subject-name">Français</span>
+                            <span class="subject-time">10:15-11:15</span>
+                        </div>
+                        <div class="subject-item">
+                            <span class="subject-name">Histoire</span>
+                            <span class="subject-time">14:30-15:30</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="schedule-day">
+                    <div class="day-header">Mardi</div>
+                    <div class="day-subjects">
+                        <div class="subject-item">
+                            <span class="subject-name">Sciences</span>
+                            <span class="subject-time">08:00-09:00</span>
+                        </div>
+                        <div class="subject-item">
+                            <span class="subject-name">Anglais</span>
+                            <span class="subject-time">13:30-14:30</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="schedule-day">
+                    <div class="day-header">Mercredi</div>
+                    <div class="day-subjects">
+                        <div class="subject-item">
+                            <span class="subject-name">Mathématiques</span>
+                            <span class="subject-time">08:00-09:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Notifications & Feedback -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="recent-activity">
+            <h3 class="chart-title mb-4">Notifications Récentes</h3>
+
+            <div class="activity-item">
+                <div class="activity-icon accent">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Absence signalée - Mathématiques</div>
+                    <div class="activity-time">Aujourd'hui 08:15</div>
+                    <small class="text-warning">4èmeA - M. Martin</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon primary">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Retard signalé - Français</div>
+                    <div class="activity-time">Hier 10:20</div>
+                    <small class="text-info">4èmeA - Mme Dubois</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon blue">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Présence confirmée - Sciences</div>
+                    <div class="activity-time">Hier 13:35</div>
+                    <small class="text-success">4èmeA - M. Rousseau</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="recent-activity">
+            <h3 class="chart-title mb-4">Derniers Échanges</h3>
+
+            <div class="activity-item">
+                <div class="activity-icon primary">
+                    <i class="fas fa-comment"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Feedback envoyé - Mathématiques</div>
+                    <div class="activity-time">Il y a 2 jours</div>
+                    <small class="text-success">Réponse reçue de M. Martin</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon accent">
+                    <i class="fas fa-comment"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Question sur le programme</div>
+                    <div class="activity-time">Il y a 1 semaine</div>
+                    <small class="text-info">En attente de réponse</small>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon blue">
+                    <i class="fas fa-comment"></i>
+                </div>
+                <div class="activity-content">
+                    <div class="activity-title">Remerciement - Projet Histoire</div>
+                    <div class="activity-time">Il y a 2 semaines</div>
+                    <small class="text-success">Échange terminé</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Summary -->
+<div class="chart-card mt-4">
+    <h3 class="chart-title mb-4">Résumé Mensuel - {{ current_month|default:"Décembre 2024" }}</h3>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="summary-item">
+                <div class="summary-value">22</div>
+                <div class="summary-label">Jours de cours</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-item">
+                <div class="summary-value">156</div>
+                <div class="summary-label">Heures de cours</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-item">
+                <div class="summary-value">2</div>
+                <div class="summary-label">Absences justifiées</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="summary-item">
+                <div class="summary-value">3</div>
+                <div class="summary-label">Retards (total: 45 min)</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .child-overview {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+    }
+
+    .child-avatar {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        margin: 0 auto;
+    }
+
+    .weekly-schedule {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .schedule-day {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .schedule-day:last-child {
+        border-bottom: none;
+    }
+
+    .day-header {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 10px;
+        font-size: 1rem;
+    }
+
+    .subject-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 0.9rem;
+    }
+
+    .subject-name {
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .subject-time {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+    }
+
+    .summary-item {
+        text-align: center;
+        padding: 20px;
+        background: var(--bg-light);
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+    }
+
+    .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 5px;
+    }
+
+    .summary-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Attendance chart
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('attendanceChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+                    datasets: [{
+                        label: 'Taux de présence (%)',
+                        data: [98, 96, 97, 98],
+                        borderColor: '#f79320',
+                        backgroundColor: 'rgba(247, 147, 32, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Absences',
+                        data: [1, 2, 1, 1],
+                        borderColor: '#00bf63',
+                        backgroundColor: 'rgba(0, 191, 99, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    function sendFeedback() {
+        showNotification('Ouverture du formulaire de feedback...', 'info');
+        // Implementation for feedback form
+    }
+
+    function downloadReport() {
+        showNotification('Téléchargement du rapport en cours...', 'info');
+        // Implementation for report download
+    }
+</script>
+{% endblock %}

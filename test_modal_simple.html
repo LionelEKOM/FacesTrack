@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Simple</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Styles de test pour les champs */
+        .modal input,
+        .modal select,
+        .modal textarea {
+            background-color: white !important;
+            border: 2px solid #007bff !important;
+            color: #000 !important;
+            pointer-events: auto !important;
+            cursor: text !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
+            z-index: 1000 !important;
+        }
+
+        .modal select {
+            cursor: pointer !important;
+        }
+
+        .modal input:focus,
+        .modal select:focus,
+        .modal textarea:focus {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1>Test Modal Simple</h1>
+        <p>Cliquez sur le bouton pour ouvrir la modal et tester les champs :</p>
+
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#testModal">
+            Ouvrir Modal de Test
+        </button>
+
+        <div class="mt-4">
+            <h3>Instructions de test :</h3>
+            <ol>
+                <li>Cliquez sur "Ouvrir Modal de Test"</li>
+                <li>Essayez de cliquer dans les champs</li>
+                <li>Essayez de taper du texte</li>
+                <li>Essayez de sélectionner des options</li>
+                <li>Regardez la console pour les diagnostics</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Modal de Test -->
+    <div class="modal fade" id="testModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modal de Test</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="testSelect" class="form-label">Menu déroulant *</label>
+                                <select class="form-select" id="testSelect" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="1">Option 1</option>
+                                    <option value="2">Option 2</option>
+                                    <option value="3">Option 3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="testText" class="form-label">Champ texte *</label>
+                                <input type="text" class="form-control" id="testText" placeholder="Tapez ici..."
+                                    required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="testDate" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="testDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="testTime" class="form-label">Heure *</label>
+                                <input type="time" class="form-control" id="testTime" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="testTextarea" class="form-label">Zone de texte</label>
+                            <textarea class="form-control" id="testTextarea" rows="3"
+                                placeholder="Tapez votre message..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="submit" class="btn btn-primary">Tester</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('Page chargée');
+
+            // Définir la date d'aujourd'hui
+            const today = new Date().toISOString().split('T')[0];
+            const dateField = document.getElementById('testDate');
+            if (dateField) {
+                dateField.value = today;
+                console.log('Date définie:', today);
+            }
+
+            // Test des champs lors de l'ouverture de la modal
+            const testModal = document.getElementById('testModal');
+            if (testModal) {
+                testModal.addEventListener('shown.bs.modal', function () {
+                    console.log('Modal ouverte, test des champs...');
+                    testFields();
+                });
+            }
+        });
+
+        function testFields() {
+            console.log('=== TEST DES CHAMPS ===');
+
+            const fields = [
+                { id: 'testSelect', type: 'select', name: 'Menu déroulant' },
+                { id: 'testText', type: 'input', name: 'Champ texte' },
+                { id: 'testDate', type: 'input', name: 'Date' },
+                { id: 'testTime', type: 'input', name: 'Heure' },
+                { id: 'testTextarea', type: 'textarea', name: 'Zone de texte' }
+            ];
+
+            fields.forEach(field => {
+                const element = document.getElementById(field.id);
+                if (element) {
+                    console.log(`\n--- ${field.name} ---`);
+                    console.log('Type:', element.type);
+                    console.log('ID:', element.id);
+                    console.log('Valeur:', element.value);
+                    console.log('Disabled:', element.disabled);
+                    console.log('Readonly:', element.readOnly);
+
+                    // Test de focus
+                    try {
+                        element.focus();
+                        console.log('✅ Focus réussi');
+                    } catch (e) {
+                        console.log('❌ Erreur de focus:', e.message);
+                    }
+
+                    // Test de saisie
+                    if (field.type === 'input' || field.type === 'textarea') {
+                        try {
+                            const oldValue = element.value;
+                            element.value = 'TEST_' + Date.now();
+                            console.log('✅ Saisie réussie, nouvelle valeur:', element.value);
+                            element.value = oldValue; // Restaurer
+                        } catch (e) {
+                            console.log('❌ Erreur de saisie:', e.message);
+                        }
+                    }
+
+                    // Test de sélection
+                    if (field.type === 'select') {
+                        try {
+                            const oldValue = element.value;
+                            if (element.options.length > 1) {
+                                element.value = element.options[1].value;
+                                console.log('✅ Sélection réussie, nouvelle valeur:', element.value);
+                                element.value = oldValue; // Restaurer
+                            }
+                        } catch (e) {
+                            console.log('❌ Erreur de sélection:', e.message);
+                        }
+                    }
+                } else {
+                    console.log(`❌ ${field.name}: NON TROUVÉ`);
+                }
+            });
+        }
+
+        // Fonction accessible depuis la console
+        window.testFields = testFields;
+    </script>
+</body>
+
+</html>
