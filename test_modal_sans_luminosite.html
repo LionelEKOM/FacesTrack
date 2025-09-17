@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Modal Sans Luminosité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* CSS SANS LUMINOSITÉ POUR FORCER L'ACCESSIBILITÉ */
+
+        /* Z-index élevés */
+        .modal {
+            z-index: 9999 !important;
+        }
+
+        .modal-dialog {
+            z-index: 10000 !important;
+        }
+
+        .modal-content {
+            z-index: 10001 !important;
+            /* Supprimer les effets de luminosité */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5) !important;
+            background: #ffffff !important;
+        }
+
+        /* Supprimer le backdrop lumineux */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            opacity: 1 !important;
+        }
+
+        /* FORCER l'accessibilité de TOUS les champs */
+        .modal input,
+        .modal select,
+        .modal textarea,
+        .modal .form-control,
+        .modal .form-select {
+            /* Styles de base sans luminosité */
+            background-color: #ffffff !important;
+            border: 2px solid #007bff !important;
+            color: #000000 !important;
+            font-size: 16px !important;
+            padding: 10px !important;
+            border-radius: 6px !important;
+
+            /* FORCER l'interactivité */
+            pointer-events: auto !important;
+            user-select: auto !important;
+            cursor: text !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            position: relative !important;
+            z-index: 10002 !important;
+
+            /* Supprimer tous les effets de luminosité */
+            box-shadow: none !important;
+            text-shadow: none !important;
+            filter: none !important;
+            -webkit-filter: none !important;
+
+            /* Désactiver tout ce qui pourrait bloquer */
+            -webkit-user-select: auto !important;
+            -moz-user-select: auto !important;
+            -ms-user-select: auto !important;
+            -webkit-touch-callout: auto !important;
+        }
+
+        /* Cursor spécifique pour les selects */
+        .modal select,
+        .modal .form-select {
+            cursor: pointer !important;
+            background-color: #ffffff !important;
+        }
+
+        /* Focus sans luminosité excessive */
+        .modal input:focus,
+        .modal select:focus,
+        .modal textarea:focus,
+        .modal .form-control:focus,
+        .modal .form-select:focus {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3) !important;
+            background-color: #ffffff !important;
+            outline: none !important;
+            /* Pas de transform scale pour éviter la luminosité */
+        }
+
+        /* Hover sans luminosité */
+        .modal input:hover,
+        .modal select:hover,
+        .modal textarea:hover,
+        .modal .form-control:hover,
+        .modal .form-select:hover {
+            border-color: #0056b3 !important;
+            background-color: #f8f9fa !important;
+            /* Pas de transform pour éviter la luminosité */
+        }
+
+        /* Labels sans luminosité */
+        .modal .form-label {
+            color: #000000 !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            margin-bottom: 8px !important;
+            display: block !important;
+            /* Pas de text-shadow ou d'effets lumineux */
+        }
+
+        /* Désactiver TOUS les styles qui pourraient bloquer */
+        .modal * {
+            pointer-events: auto !important;
+        }
+
+        /* Supprimer les animations et transitions qui pourraient causer la luminosité */
+        .modal,
+        .modal * {
+            animation: none !important;
+            transition: none !important;
+            -webkit-animation: none !important;
+            -webkit-transition: none !important;
+        }
+
+        /* Styles pour les boutons sans luminosité */
+        .btn {
+            border-radius: 8px !important;
+            font-weight: 500 !important;
+            /* Supprimer les transitions qui causent la luminosité */
+        }
+
+        .btn:hover {
+            /* Supprimer le hover qui cause la luminosité */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .btn-primary {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            color: #ffffff !important;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3 !important;
+            border-color: #0056b3 !important;
+        }
+    </style>
+</head>
+
+<body style="background-color: #f0f0f0; padding: 20px;">
+    <div class="container">
+        <h1 style="color: #007bff; text-align: center; margin-bottom: 30px;">
+            🔧 TEST MODAL SANS LUMINOSITÉ 🔧
+        </h1>
+
+        <div class="alert alert-info" role="alert">
+            <strong>💡 OBJECTIF :</strong> Ce fichier teste une modal Bootstrap SANS effets de luminosité pour forcer
+            l'accessibilité des champs.
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Test Modal</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Cliquez sur le bouton pour ouvrir la modal SANS luminosité :</p>
+                        <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#testModal">
+                            🔧 OUVRIR MODAL SANS LUMINOSITÉ
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Instructions</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol>
+                            <li>Cliquez sur le bouton bleu</li>
+                            <li>La modal s'ouvre SANS effets de luminosité</li>
+                            <li>Les champs ont des bordures bleues simples</li>
+                            <li>Essayez de cliquer dans les champs</li>
+                            <li>Essayez de taper du texte</li>
+                            <li>Regardez la console pour les diagnostics</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Test Sans Luminosité -->
+    <div class="modal fade" id="testModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">🔧 MODAL SANS LUMINOSITÉ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form>
+                    <div class="modal-body">
+                        <div class="alert alert-success">
+                            <strong>✅ SUCCÈS :</strong> Cette modal utilise des styles CSS SANS luminosité pour forcer
+                            l'accessibilité !
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="testSelect" class="form-label">🔵 MENU DÉROULANT *</label>
+                                <select class="form-select" id="testSelect" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="1">Option 1</option>
+                                    <option value="2">Option 2</option>
+                                    <option value="3">Option 3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="testText" class="form-label">🔵 CHAMP TEXTE *</label>
+                                <input type="text" class="form-control" id="testText" placeholder="Tapez ici..."
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="testDate" class="form-label">🔵 DATE *</label>
+                                <input type="date" class="form-control" id="testDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="testTime" class="form-label">🔵 HEURE *</label>
+                                <input type="time" class="form-control" id="testTime" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="testTextarea" class="form-label">🔵 ZONE DE TEXTE</label>
+                            <textarea class="form-control" id="testTextarea" rows="4"
+                                placeholder="Tapez votre message..."></textarea>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <strong>🧪 TEST :</strong> Essayez de cliquer dans les champs et de taper du texte. Les
+                            styles sans luminosité devraient permettre l'accessibilité !
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        <button type="submit" class="btn btn-success btn-lg">🧪 TESTER</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🔧 PAGE SANS LUMINOSITÉ CHARGÉE');
+
+            // Définir la date d'aujourd'hui
+            const today = new Date().toISOString().split('T')[0];
+            const dateField = document.getElementById('testDate');
+            if (dateField) {
+                dateField.value = today;
+                console.log('📅 Date définie:', today);
+            }
+
+            // Test des champs lors de l'ouverture de la modal
+            const testModal = document.getElementById('testModal');
+            if (testModal) {
+                testModal.addEventListener('shown.bs.modal', function () {
+                    console.log('🔧 MODAL SANS LUMINOSITÉ OUVERTE');
+                    console.log('🧪 TEST DES CHAMPS SANS EFFETS DE LUMINOSITÉ...');
+                    testFieldsSansLuminosite();
+                });
+            }
+        });
+
+        function testFieldsSansLuminosite() {
+            console.log('🔧 === TEST DES CHAMPS SANS LUMINOSITÉ ===');
+
+            const fields = [
+                { id: 'testSelect', type: 'select', name: 'Menu déroulant' },
+                { id: 'testText', type: 'input', name: 'Champ texte' },
+                { id: 'testDate', type: 'input', name: 'Date' },
+                { id: 'testTime', type: 'input', name: 'Heure' },
+                { id: 'testTextarea', type: 'textarea', name: 'Zone de texte' }
+            ];
+
+            fields.forEach(field => {
+                const element = document.getElementById(field.id);
+                if (element) {
+                    console.log(`\n🔵 --- ${field.name} ---`);
+                    console.log('Type:', element.type);
+                    console.log('ID:', element.id);
+                    console.log('Valeur:', element.value);
+                    console.log('Disabled:', element.disabled);
+                    console.log('Readonly:', element.readOnly);
+
+                    // FORÇAGE SANS LUMINOSITÉ
+                    forceSansLuminosite(element, field.name);
+
+                    // Test de focus
+                    try {
+                        element.focus();
+                        console.log('✅ Focus réussi');
+                    } catch (e) {
+                        console.log('❌ Erreur de focus:', e.message);
+                    }
+
+                    // Test de saisie
+                    if (field.type === 'input' || field.type === 'textarea') {
+                        try {
+                            const oldValue = element.value;
+                            element.value = 'TEST_SANS_' + Date.now();
+                            console.log('✅ Saisie réussie, nouvelle valeur:', element.value);
+                            element.value = oldValue; // Restaurer
+                        } catch (e) {
+                            console.log('❌ Erreur de saisie:', e.message);
+                        }
+                    }
+
+                    // Test de sélection
+                    if (field.type === 'select') {
+                        try {
+                            const oldValue = element.value;
+                            if (element.options.length > 1) {
+                                element.value = element.options[1].value;
+                                console.log('✅ Sélection réussie, nouvelle valeur:', element.value);
+                                element.value = oldValue; // Restaurer
+                            }
+                        } catch (e) {
+                            console.log('❌ Erreur de sélection:', e.message);
+                        }
+                    }
+                } else {
+                    console.log(`❌ ${field.name}: NON TROUVÉ`);
+                }
+            });
+        }
+
+        function forceSansLuminosite(element, fieldName) {
+            console.log(`🔧 FORÇAGE SANS LUMINOSITÉ: ${fieldName}`);
+
+            // Supprimer TOUS les attributs qui pourraient bloquer
+            element.removeAttribute('disabled');
+            element.removeAttribute('readonly');
+            element.removeAttribute('aria-disabled');
+            element.removeAttribute('aria-readonly');
+
+            // Forcer les propriétés
+            element.disabled = false;
+            element.readOnly = false;
+
+            // Supprimer les classes qui pourraient bloquer
+            element.classList.remove('disabled', 'readonly', 'form-control-plaintext');
+
+            // FORCER les styles CSS sans luminosité
+            element.style.pointerEvents = 'auto';
+            element.style.userSelect = 'auto';
+            element.style.cursor = element.tagName === 'SELECT' ? 'pointer' : 'text';
+            element.style.opacity = '1';
+            element.style.visibility = 'visible';
+            element.style.position = 'relative';
+            element.style.zIndex = '10002';
+            element.style.backgroundColor = '#ffffff';
+            element.style.border = '2px solid #007bff';
+            element.style.color = '#000000';
+            element.style.fontSize = '16px';
+            element.style.padding = '10px';
+            element.style.borderRadius = '6px';
+
+            // Supprimer TOUS les effets de luminosité
+            element.style.boxShadow = 'none';
+            element.style.textShadow = 'none';
+            element.style.filter = 'none';
+            element.style.webkitFilter = 'none';
+            element.style.transform = 'none';
+            element.style.transition = 'none';
+            element.style.animation = 'none';
+
+            // Supprimer TOUS les event listeners qui pourraient bloquer
+            element.onclick = null;
+            element.onmousedown = null;
+            element.onmouseup = null;
+            element.onmousemove = null;
+            element.onkeydown = null;
+            element.onkeyup = null;
+            element.onkeypress = null;
+
+            // Ajouter des event listeners simples
+            element.addEventListener('click', function (e) {
+                console.log(`🔧 CLICK SANS LUMINOSITÉ sur ${fieldName}`);
+                e.stopPropagation();
+            }, true);
+
+            element.addEventListener('focus', function (e) {
+                console.log(`🔧 FOCUS SANS LUMINOSITÉ sur ${fieldName}`);
+                this.style.borderColor = '#28a745';
+                this.style.boxShadow = '0 0 0 3px rgba(40, 167, 69, 0.3)';
+            });
+
+            element.addEventListener('blur', function (e) {
+                console.log(`🔧 BLUR SANS LUMINOSITÉ sur ${fieldName}`);
+                this.style.borderColor = '#007bff';
+                this.style.boxShadow = 'none';
+            });
+
+            // Pour les champs de texte, forcer la saisie
+            if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                element.addEventListener('input', function (e) {
+                    console.log(`🔧 SAISIE SANS LUMINOSITÉ sur ${fieldName}:`, this.value);
+                });
+
+                element.addEventListener('keydown', function (e) {
+                    console.log(`🔧 TOUCHE SANS LUMINOSITÉ sur ${fieldName}:`, e.key);
+                });
+            }
+
+            // Pour les selects, forcer la sélection
+            if (element.tagName === 'SELECT') {
+                element.addEventListener('change', function (e) {
+                    console.log(`🔧 CHANGEMENT SANS LUMINOSITÉ sur ${fieldName}:`, this.value);
+                });
+            }
+
+            console.log(`🔧 ACCESSIBILITÉ SANS LUMINOSITÉ FORCÉE pour ${fieldName}`);
+        }
+
+        // Fonction accessible depuis la console
+        window.testFieldsSansLuminosite = testFieldsSansLuminosite;
+        window.forceSansLuminosite = forceSansLuminosite;
+    </script>
+</body>
+
+</html>

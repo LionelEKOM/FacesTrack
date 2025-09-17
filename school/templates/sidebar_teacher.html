@@ -1,0 +1,42 @@
+<div class="nav-item">
+    <a href="{% url 'enseignant_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_classes' %}" class="nav-link" id="sidebar-classes">
+        <i class="fas fa-chalkboard"></i>
+        My Classes
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_subjects' %}" class="nav-link" id="sidebar-subjects">
+        <i class="fas fa-book"></i>
+        My Subjects
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'liste_cours_enseignant' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-calendar-alt"></i>
+        My Courses
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'teacher_attendance_today' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-camera"></i>
+        Attendance (QR Scan)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'historique_presences' %}" class="nav-link" id="sidebar-history">
+        <i class="fas fa-history"></i>
+        Attendance History
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
+</div>

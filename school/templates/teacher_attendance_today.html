@@ -1,0 +1,55 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Today's Attendance - FaceTrack{% endblock %}
+
+{% block sidebar %}
+{% include 'sidebar_teacher.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Attendance (QR Code Scan) - Today</h2>
+
+    <!-- Informations de débogage -->
+    <div class="alert alert-info">
+        <strong>Debug Information:</strong><br>
+        <small>
+            • Connected teacher: {{ enseignant.user.get_full_name }} ({{ enseignant.user.username }})<br>
+            • Today's date: {{ today|date:"d/m/Y" }}<br>
+            • Number of courses found: {{ cours_aujourd_hui|length }}
+        </small>
+    </div>
+
+    {% if cours_aujourd_hui %}
+    <div class="row">
+        {% for cours in cours_aujourd_hui %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ cours.matiere.nom }} - {{ cours.classe.nom }}</h5>
+                    <p class="card-text">Time: {{ cours.heure_debut|time:"H:i" }} - {{ cours.heure_fin|time:"H:i" }}
+                    </p>
+                    <p class="card-text">Room: {{ cours.salle }}</p>
+                    <p class="card-text"><small class="text-muted">Date: {{ cours.date|date:"d/m/Y" }}</small></p>
+                    <a href="{% url 'qr_code_scan' cours.id %}" class="btn btn-primary">Start Attendance</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <h5>⚠️ No courses scheduled today</h5>
+        <p>Here are the possible reasons:</p>
+        <ul>
+            <li>You have no courses assigned for today</li>
+            <li>Courses have future dates</li>
+            <li>Courses have no assigned teacher</li>
+        </ul>
+        <hr>
+        <p><strong>Solution:</strong> Contact the administrator to create and assign courses via the admin dashboard.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}System settings - Facetrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        User Management
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_course_management' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Course Management
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Timetable
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Presences (globalView)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistics
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Feedbacks Parents
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Notifications sent
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Register Export
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link active" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        System Settings
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>System settings</h2>
+    <p class="text-muted">Configuration and administration of the system</p>
+</div>
+
+<div class="dashboard-card">
+    <div class="card-header">
+        <h3 class="card-title">System configuration</h3>
+    </div>
+    <div class="card-content">
+        <p>Functionality under development ...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-settings');
+        }
+    });
+</script>
+{% endblock %}
