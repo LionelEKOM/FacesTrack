@@ -158,7 +158,7 @@
                 <select class="form-select" id="statut" name="statut">
                     <option value="">All Status</option>
                     {% for value, label in statut_choices %}
-                    <option value="{{ value }}" {% if statut_filter==value %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ value }}" {% if statut_filter == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -167,7 +167,7 @@
                 <select class="form-select" id="type" name="type">
                     <option value="">All Types</option>
                     {% for value, label in type_choices %}
-                    <option value="{{ value }}" {% if type_filter==value %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -176,7 +176,7 @@
                 <select class="form-select" id="priorite" name="priorite">
                     <option value="">All Priorities</option>
                     {% for value, label in priorite_choices %}
-                    <option value="{{ value }}" {% if priorite_filter==value %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ value }}" {% if priorite_filter == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>

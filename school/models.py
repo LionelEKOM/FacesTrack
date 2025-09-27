@@ -260,6 +260,13 @@ class Feedback(models.Model):
         ('FERME', 'Closed')
     ]
     
+    PRIORITE_CHOICES = [
+        ('FAIBLE', 'Low'),
+        ('NORMALE', 'Normal'),
+        ('HAUTE', 'High'),
+        ('URGENTE', 'Urgent')
+    ]
+    
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE)
     eleve = models.ForeignKey(Eleve, on_delete=models.CASCADE, null=True, blank=True)
     cours = models.ForeignKey(Cours, on_delete=models.CASCADE, null=True, blank=True)
@@ -267,12 +274,7 @@ class Feedback(models.Model):
     sujet = models.CharField(max_length=200)
     message = models.TextField()
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='NOUVEAU')
-    priorite = models.CharField(max_length=10, choices=[
-        ('FAIBLE', 'Low'),
-        ('NORMALE', 'Normal'),
-        ('HAUTE', 'High'),
-        ('URGENTE', 'Urgent')
-    ], default='NORMALE')
+    priorite = models.CharField(max_length=10, choices=PRIORITE_CHOICES, default='NORMALE')
     
     # Réponse de l'enseignant/administration
     reponse = models.TextField(blank=True)

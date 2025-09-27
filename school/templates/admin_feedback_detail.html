@@ -119,8 +119,7 @@
                 <div class="row mb-3">
                     {% if feedback.eleve %}
                     <div class="col-md-6">
-                        <strong>Student:</strong> {{ feedback.eleve.user.get_full_name }} ({{ feedback.eleve.classe.nom
-                        }})
+                        <strong>Student:</strong> {{ feedback.eleve.user.get_full_name }}
                     </div>
                     {% endif %}
                     {% if feedback.cours %}
@@ -184,8 +183,8 @@
                     <div class="mb-3">
                         <label for="statut" class="form-label">Status</label>
                         <select class="form-select" id="statut" name="statut">
-                            {% for value, label in feedback.STATUT_CHOICES %}
-                            <option value="{{ value }}" {% if feedback.statut==value %}selected{% endif %}>{{ label }}
+                            {% for value, label in statut_choices %}
+                            <option value="{{ value }}" {% if feedback.statut == value %}selected{% endif %}>{{ label }}
                             </option>
                             {% endfor %}
                         </select>
@@ -193,8 +192,8 @@
                     <div class="mb-3">
                         <label for="priorite" class="form-label">Priority</label>
                         <select class="form-select" id="priorite" name="priorite">
-                            {% for value, label in feedback.PRIORITE_CHOICES %}
-                            <option value="{{ value }}" {% if feedback.priorite==value %}selected{% endif %}>{{ label }}
+                            {% for value, label in priorite_choices %}
+                            <option value="{{ value }}" {% if feedback.priorite == value %}selected{% endif %}>{{ label }}
                             </option>
                             {% endfor %}
                         </select>

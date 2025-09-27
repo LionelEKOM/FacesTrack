@@ -501,7 +501,7 @@ def admin_feedback(request):
     context = {
         'user': request.user,
         'page_obj': page_obj,
-        'feedbacks': page_obj,
+        'feedbacks': page_obj.object_list,
         'total_feedbacks': total_feedbacks,
         'nouveaux_feedbacks': nouveaux_feedbacks,
         'en_cours_feedbacks': en_cours_feedbacks,
@@ -561,6 +561,8 @@ def admin_feedback_detail(request, feedback_id):
     context = {
         'feedback': feedback,
         'user': request.user,
+        'statut_choices': Feedback.STATUT_CHOICES,
+        'priorite_choices': Feedback.PRIORITE_CHOICES,
     }
     return render(request, 'admin_feedback_detail.html', context)
 
