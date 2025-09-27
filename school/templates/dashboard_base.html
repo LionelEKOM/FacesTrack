@@ -21,23 +21,10 @@
     <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
     <link rel="stylesheet" href="{% static 'css/dashboard_enhancements.css' %}">
 
-    <!-- Styles de diagnostic pour la dropdown -->
+    <!-- Styles pour la dropdown -->
     <style>
         .profile-dropdown .dropdown-menu {
             z-index: 9999 !important;
-            position: absolute !important;
-            display: none;
-        }
-        
-        .profile-dropdown .dropdown-menu.show {
-            display: block !important;
-        }
-        
-        /* Forcer la visibilité pour le diagnostic */
-        .profile-dropdown .dropdown-menu.show {
-            opacity: 1 !important;
-            visibility: visible !important;
-            transform: none !important;
         }
     </style>
 
@@ -58,14 +45,17 @@
                 <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
                 <div class="dropdown profile-dropdown">
                     <button class="btn btn-link dropdown-toggle" type="button" id="profileDropdown"
-                        data-bs-toggle="dropdown" aria-expanded="false">
+                        data-bs-toggle="dropdown" data-bs-auto-close="true" aria-expanded="false">
                         <i class="fas fa-user-circle"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}"><i
+                                    class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -93,41 +83,21 @@
     <script src="{% static 'js/dashboard.js' %}"></script>
     <script src="{% static 'js/sidebar.js' %}"></script>
 
-    <!-- Script de diagnostic pour la dropdown -->
+    <!-- Script de test pour la dropdown -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Dropdown diagnostic...');
-            
-            const profileDropdown = document.querySelector('.profile-dropdown');
-            const dropdownToggle = document.querySelector('#profileDropdown');
-            const dropdownMenu = document.querySelector('.profile-dropdown .dropdown-menu');
-            
-            console.log('Profile dropdown:', profileDropdown);
-            console.log('Dropdown toggle:', dropdownToggle);
-            console.log('Dropdown menu:', dropdownMenu);
-            
-            if (dropdownToggle) {
-                dropdownToggle.addEventListener('click', function(e) {
-                    console.log('Click on dropdown button');
-                    e.preventDefault();
-                    
-                    // Tester l'ouverture manuelle
-                    if (dropdownMenu.classList.contains('show')) {
-                        dropdownMenu.classList.remove('show');
-                        console.log('Dropdown closed manually');
-                    } else {
-                        dropdownMenu.classList.add('show');
-                        console.log('Dropdown opened manually');
-                    }
-                });
-            }
-            
-            // Vérifier si Bootstrap est chargé
+        document.addEventListener('DOMContentLoaded', function () {
+            // Vérifier que Bootstrap est chargé
             if (typeof bootstrap !== 'undefined') {
-                console.log('Bootstrap is loaded');
-                console.log('Version Bootstrap:', bootstrap.VERSION);
+                console.log('Bootstrap chargé avec succès');
+
+                // Initialiser manuellement la dropdown si nécessaire
+                const dropdownElement = document.querySelector('#profileDropdown');
+                if (dropdownElement) {
+                    const dropdown = new bootstrap.Dropdown(dropdownElement);
+                    console.log('Dropdown initialisée');
+                }
             } else {
-                console.log('Bootstrap is NOT loaded');
+                console.error('Bootstrap n\'est pas chargé !');
             }
         });
     </script>

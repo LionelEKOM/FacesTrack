@@ -1,0 +1,211 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}My Feedback - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'parent_dashboard' %}" class="nav-link">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-clipboard-check"></i>
+        My child's waiting
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-calendar-alt"></i>
+        Timetable
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-bell"></i>
+        Notifications (absences/Laters)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'feedback_list' %}" class="nav-link active">
+        <i class="fas fa-comments"></i>
+        My Feedback
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-download"></i>
+        Download the individual register
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">My Feedback</h2>
+        <p class="text-muted mb-0">Track your questions and concerns</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" onclick="sendFeedback()">
+            <i class="fas fa-plus me-2"></i>New Feedback
+        </button>
+    </div>
+</div>
+
+<!-- Feedback List -->
+<div class="row">
+    <div class="col-12">
+        {% if feedbacks %}
+        <div class="feedback-list">
+            {% for feedback in feedbacks %}
+            <div class="feedback-item mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h5 class="card-title mb-0 me-3">{{ feedback.sujet }}</h5>
+                                    <span class="badge bg-{{ feedback.get_statut_display|lower|add:'-primary' }}">
+                                        {{ feedback.get_statut_display }}
+                                    </span>
+                                    <span
+                                        class="badge bg-{{ feedback.get_priorite_display|lower|add:'-secondary' }} ms-2">
+                                        {{ feedback.get_priorite_display }}
+                                    </span>
+                                </div>
+                                <p class="card-text text-muted mb-2">
+                                    <i class="fas fa-tag me-1"></i>{{ feedback.get_type_feedback_display }}
+                                    {% if feedback.eleve %}
+                                    | <i class="fas fa-user me-1"></i>{{ feedback.eleve.user.get_full_name }}
+                                    {% endif %}
+                                    {% if feedback.cours %}
+                                    | <i class="fas fa-book me-1"></i>{{ feedback.cours.matiere.nom }}
+                                    {% endif %}
+                                </p>
+                                <p class="card-text">{{ feedback.message|truncatewords:20 }}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ feedback.date_creation|date:"F d, Y H:i" }}
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="d-flex flex-column gap-2">
+                                    <a href="{% url 'feedback_detail' feedback.id %}"
+                                        class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </a>
+                                    {% if feedback.is_answered %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Answered
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No feedback yet</h4>
+            <p class="text-muted">You haven't sent any feedback yet. Click the button above to get started!</p>
+            <button class="btn btn-primary" onclick="sendFeedback()">
+                <i class="fas fa-plus me-2"></i>Send Your First Feedback
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .feedback-item .card {
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .feedback-item .card:hover {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .badge {
+        font-size: 0.75rem;
+    }
+
+    .feedback-list {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function sendFeedback() {
+        // Load modal content via AJAX
+        fetch('{% url "feedback_modal" %}')
+            .then(response => response.text())
+            .then(html => {
+                // Remove existing modal if any
+                const existingModal = document.getElementById('feedbackModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+
+                // Add new modal to body
+                document.body.insertAdjacentHTML('beforeend', html);
+
+                // Show the modal
+                const feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+                feedbackModal.show();
+            })
+            .catch(error => {
+                console.error('Error loading feedback modal:', error);
+                showNotification('Error loading feedback form', 'error');
+            });
+    }
+
+    // Function to show notification
+    function showNotification(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' :
+            type === 'error' ? 'alert-danger' :
+                type === 'warning' ? 'alert-warning' : 'alert-info';
+        const icon = type === 'success' ? 'fa-check-circle' :
+            type === 'error' ? 'fa-exclamation-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            <i class="fas ${icon} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

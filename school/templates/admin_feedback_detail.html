@@ -1,0 +1,304 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Feedback Details - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'admin_dashboard' %}" class="nav-link" id="sidebar-dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_users' %}" class="nav-link" id="sidebar-users">
+        <i class="fas fa-users"></i>
+        User Management
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_course_management' %}" class="nav-link" id="sidebar-courses">
+        <i class="fas fa-book"></i>
+        Course Management
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_schedule' %}" class="nav-link" id="sidebar-schedule">
+        <i class="fas fa-calendar-alt"></i>
+        Schedule
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_attendance' %}" class="nav-link" id="sidebar-attendance">
+        <i class="fas fa-clipboard-check"></i>
+        Attendance (Global View)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_stats' %}" class="nav-link" id="sidebar-stats">
+        <i class="fas fa-chart-bar"></i>
+        Statistics
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_feedback' %}" class="nav-link active" id="sidebar-feedback">
+        <i class="fas fa-comments"></i>
+        Parent Feedback
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link" id="sidebar-notifications">
+        <i class="fas fa-bell"></i>
+        Sent Notifications
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_export' %}" class="nav-link" id="sidebar-export">
+        <i class="fas fa-download"></i>
+        Export Records
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'admin_settings' %}" class="nav-link" id="sidebar-settings">
+        <i class="fas fa-cog"></i>
+        System Settings
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Feedback Details</h2>
+        <p class="text-muted mb-0">Feedback #{{ feedback.id }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'admin_feedback' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Feedback Information -->
+    <div class="col-lg-8">
+        <div class="dashboard-card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ feedback.sujet }}</h4>
+                    <div class="d-flex gap-2">
+                        <span
+                            class="badge bg-{% if feedback.statut == 'NOUVEAU' %}warning{% elif feedback.statut == 'EN_COURS' %}primary{% elif feedback.statut == 'REPONDU' %}success{% else %}secondary{% endif %}">
+                            {{ feedback.get_statut_display }}
+                        </span>
+                        <span
+                            class="badge bg-{% if feedback.priorite == 'URGENTE' %}danger{% elif feedback.priorite == 'HAUTE' %}warning{% elif feedback.priorite == 'NORMALE' %}info{% else %}secondary{% endif %}">
+                            {{ feedback.get_priorite_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Type:</strong> {{ feedback.get_type_feedback_display }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Created:</strong> {{ feedback.date_creation|date:"F d, Y H:i" }}
+                    </div>
+                </div>
+
+                {% if feedback.eleve or feedback.cours %}
+                <div class="row mb-3">
+                    {% if feedback.eleve %}
+                    <div class="col-md-6">
+                        <strong>Student:</strong> {{ feedback.eleve.user.get_full_name }} ({{ feedback.eleve.classe.nom
+                        }})
+                    </div>
+                    {% endif %}
+                    {% if feedback.cours %}
+                    <div class="col-md-6">
+                        <strong>Course:</strong> {{ feedback.cours.matiere.nom }} - {{ feedback.cours.classe.nom }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <strong>Parent:</strong>
+                    <div class="mt-1">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm me-2">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ feedback.parent.user.get_full_name }}</div>
+                                <small class="text-muted">{{ feedback.parent.user.email }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Message:</strong>
+                    <div class="mt-2 p-3 bg-light rounded">
+                        {{ feedback.message|linebreaks }}
+                    </div>
+                </div>
+
+                {% if feedback.is_answered %}
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-reply me-2"></i>Response</h6>
+                    <div class="mt-2">
+                        {{ feedback.reponse|linebreaks }}
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-user me-1"></i>
+                        Answered by {{ feedback.reponse_par.get_full_name|default:"Administration" }}
+                        on {{ feedback.date_reponse|date:"F d, Y H:i" }}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Panel -->
+    <div class="col-lg-4">
+        <div class="dashboard-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <!-- Update Status -->
+                <form method="post" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_status">
+                    <div class="mb-3">
+                        <label for="statut" class="form-label">Status</label>
+                        <select class="form-select" id="statut" name="statut">
+                            {% for value, label in feedback.STATUT_CHOICES %}
+                            <option value="{{ value }}" {% if feedback.statut==value %}selected{% endif %}>{{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="priorite" class="form-label">Priority</label>
+                        <select class="form-select" id="priorite" name="priorite">
+                            {% for value, label in feedback.PRIORITE_CHOICES %}
+                            <option value="{{ value }}" {% if feedback.priorite==value %}selected{% endif %}>{{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save me-2"></i>Update Status
+                    </button>
+                </form>
+
+                <hr>
+
+                <!-- Respond to Feedback -->
+                {% if not feedback.is_answered %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="respond">
+                    <div class="mb-3">
+                        <label for="reponse" class="form-label">Response</label>
+                        <textarea class="form-control" id="reponse" name="reponse" rows="4"
+                            placeholder="Write your response to the parent..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-paper-plane me-2"></i>Send Response
+                    </button>
+                </form>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This feedback has already been answered.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Feedback Information -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h5 class="mb-0">Feedback Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    <span
+                        class="badge bg-{% if feedback.statut == 'NOUVEAU' %}warning{% elif feedback.statut == 'EN_COURS' %}primary{% elif feedback.statut == 'REPONDU' %}success{% else %}secondary{% endif %} ms-2">
+                        {{ feedback.get_statut_display }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Priority:</strong>
+                    <span
+                        class="badge bg-{% if feedback.priorite == 'URGENTE' %}danger{% elif feedback.priorite == 'HAUTE' %}warning{% elif feedback.priorite == 'NORMALE' %}info{% else %}secondary{% endif %} ms-2">
+                        {{ feedback.get_priorite_display }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Created:</strong><br>
+                    <small class="text-muted">{{ feedback.date_creation|date:"F d, Y H:i" }}</small>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Last Updated:</strong><br>
+                    <small class="text-muted">{{ feedback.date_modification|date:"F d, Y H:i" }}</small>
+                </div>
+
+                {% if feedback.is_answered %}
+                <div class="mb-3">
+                    <strong>Response Date:</strong><br>
+                    <small class="text-muted">{{ feedback.date_reponse|date:"F d, Y H:i" }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof maintainActiveSidebarItem === 'function') {
+            maintainActiveSidebarItem('#sidebar-feedback');
+        }
+    });
+</script>
+
+<style>
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+</style>
+{% endblock %}

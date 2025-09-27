@@ -1,0 +1,266 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Feedback Details - FaceTrack{% endblock %}
+
+{% block sidebar %}
+<div class="nav-item">
+    <a href="{% url 'parent_dashboard' %}" class="nav-link">
+        <i class="fas fa-tachometer-alt"></i>
+        Dashboard
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-clipboard-check"></i>
+        My child's waiting
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-calendar-alt"></i>
+        Timetable
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-bell"></i>
+        Notifications (absences/Laters)
+    </a>
+</div>
+<div class="nav-item">
+    <a href="{% url 'feedback_list' %}" class="nav-link active">
+        <i class="fas fa-comments"></i>
+        My Feedback
+    </a>
+</div>
+<div class="nav-item">
+    <a href="#" class="nav-link">
+        <i class="fas fa-download"></i>
+        Download the individual register
+    </a>
+</div>
+
+<div class="nav-item">
+    <a href="{% url 'logout' %}" class="nav-link" id="sidebar-logout">
+        <i class="fas fa-sign-out-alt"></i>
+        Logout
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Feedback Details</h2>
+        <p class="text-muted mb-0">Feedback #{{ feedback.id }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'feedback_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+        <button class="btn btn-primary" onclick="sendFeedback()">
+            <i class="fas fa-plus me-2"></i>New Feedback
+        </button>
+    </div>
+</div>
+
+<!-- Feedback Details -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ feedback.sujet }}</h4>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-{{ feedback.get_statut_display|lower|add:'-primary' }}">
+                            {{ feedback.get_statut_display }}
+                        </span>
+                        <span class="badge bg-{{ feedback.get_priorite_display|lower|add:'-secondary' }}">
+                            {{ feedback.get_priorite_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Type:</strong> {{ feedback.get_type_feedback_display }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Created:</strong> {{ feedback.date_creation|date:"F d, Y H:i" }}
+                    </div>
+                </div>
+
+                {% if feedback.eleve or feedback.cours %}
+                <div class="row mb-3">
+                    {% if feedback.eleve %}
+                    <div class="col-md-6">
+                        <strong>Child:</strong> {{ feedback.eleve.user.get_full_name }}
+                    </div>
+                    {% endif %}
+                    {% if feedback.cours %}
+                    <div class="col-md-6">
+                        <strong>Course:</strong> {{ feedback.cours.matiere.nom }} - {{ feedback.cours.classe.nom }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <strong>Message:</strong>
+                    <div class="mt-2 p-3 bg-light rounded">
+                        {{ feedback.message|linebreaks }}
+                    </div>
+                </div>
+
+                {% if feedback.is_answered %}
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-reply me-2"></i>Response</h6>
+                    <div class="mt-2">
+                        {{ feedback.reponse|linebreaks }}
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-user me-1"></i>
+                        Answered by {{ feedback.reponse_par.get_full_name|default:"Administration" }}
+                        on {{ feedback.date_reponse|date:"F d, Y H:i" }}
+                    </small>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-clock me-2"></i>
+                    Your feedback is being reviewed. We'll respond within 24-48 hours.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Feedback Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    <span class="badge bg-{{ feedback.get_statut_display|lower|add:'-primary' }} ms-2">
+                        {{ feedback.get_statut_display }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Priority:</strong>
+                    <span class="badge bg-{{ feedback.get_priorite_display|lower|add:'-secondary' }} ms-2">
+                        {{ feedback.get_priorite_display }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Created:</strong><br>
+                    <small class="text-muted">{{ feedback.date_creation|date:"F d, Y H:i" }}</small>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Last Updated:</strong><br>
+                    <small class="text-muted">{{ feedback.date_modification|date:"F d, Y H:i" }}</small>
+                </div>
+
+                {% if feedback.is_answered %}
+                <div class="mb-3">
+                    <strong>Response Date:</strong><br>
+                    <small class="text-muted">{{ feedback.date_reponse|date:"F d, Y H:i" }}</small>
+                </div>
+                {% endif %}
+
+                <hr>
+
+                <div class="text-center">
+                    <button class="btn btn-primary w-100" onclick="sendFeedback()">
+                        <i class="fas fa-plus me-2"></i>Send New Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: none;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        color: white;
+        border: none;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+    }
+
+    .bg-light {
+        background-color: #f8f9fa !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function sendFeedback() {
+        // Load modal content via AJAX
+        fetch('{% url "feedback_modal" %}')
+            .then(response => response.text())
+            .then(html => {
+                // Remove existing modal if any
+                const existingModal = document.getElementById('feedbackModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+
+                // Add new modal to body
+                document.body.insertAdjacentHTML('beforeend', html);
+
+                // Show the modal
+                const feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+                feedbackModal.show();
+            })
+            .catch(error => {
+                console.error('Error loading feedback modal:', error);
+                showNotification('Error loading feedback form', 'error');
+            });
+    }
+
+    // Function to show notification
+    function showNotification(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' :
+            type === 'error' ? 'alert-danger' :
+                type === 'warning' ? 'alert-warning' : 'alert-info';
+        const icon = type === 'success' ? 'fa-check-circle' :
+            type === 'error' ? 'fa-exclamation-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            <i class="fas ${icon} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

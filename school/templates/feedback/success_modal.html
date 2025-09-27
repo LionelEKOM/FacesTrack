@@ -1,0 +1,104 @@
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="mb-4">
+                    <div class="success-icon mx-auto mb-3">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h4 class="text-success mb-3">Feedback Sent Successfully!</h4>
+                    <p class="text-muted mb-4">
+                        Your feedback has been received and will be reviewed by our team.
+                        We'll respond within 24-48 hours.
+                    </p>
+                </div>
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
+                    <a href="{% url 'feedback_list' %}" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>View My Feedback
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        color: white;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .success-icon i {
+        animation: checkmark 0.6s ease-in-out;
+    }
+
+    @keyframes checkmark {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        50% {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn {
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
+<script>
+    // Auto-show the success modal when loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        successModal.show();
+
+        // Close the feedback modal if it's open
+        const feedbackModal = document.getElementById('feedbackModal');
+        if (feedbackModal) {
+            const feedbackModalInstance = bootstrap.Modal.getInstance(feedbackModal);
+            if (feedbackModalInstance) {
+                feedbackModalInstance.hide();
+            }
+        }
+
+        // Clean up when success modal is closed
+        document.getElementById('successModal').addEventListener('hidden.bs.modal', function () {
+            // Remove the success modal from DOM
+            this.remove();
+        });
+    });
+</script>

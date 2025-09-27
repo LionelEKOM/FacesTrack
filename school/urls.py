@@ -43,6 +43,7 @@ urlpatterns = [
     path('admin/attendance/', views.admin_attendance, name='admin_attendance'),
     path('admin/stats/', views.admin_stats, name='admin_stats'),
     path('admin/feedback/', views.admin_feedback, name='admin_feedback'),
+    path('admin/feedback/<int:feedback_id>/', views.admin_feedback_detail, name='admin_feedback_detail'),
     path('admin/notifications/', views.admin_notifications, name='admin_notifications'),
     path('admin/export/', views.admin_export, name='admin_export'),
     path('admin/settings/', views.admin_settings, name='admin_settings'),
@@ -53,6 +54,12 @@ urlpatterns = [
     
     # Mobile check-in
     path('mobile-checkin/<int:eleve_id>/<int:cours_id>/<str:session_id>/', views.mobile_checkin, name='mobile_checkin'),
+    
+    # Feedback URLs
+    path('parent/feedback/create/', views.feedback_create, name='feedback_create'),
+    path('parent/feedback/modal/', views.feedback_modal, name='feedback_modal'),
+    path('parent/feedback/', views.feedback_list, name='feedback_list'),
+    path('parent/feedback/<int:feedback_id>/', views.feedback_detail, name='feedback_detail'),
     
     # API endpoints
     path('api/mobile-checkin/', views.api_mobile_checkin, name='api_mobile_checkin'),

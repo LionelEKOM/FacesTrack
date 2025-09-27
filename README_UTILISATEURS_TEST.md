@@ -94,13 +94,6 @@ Ce document contient toutes les informations sur les utilisateurs de test créé
 - **Matricule** : `2025-4-19C6`
 - **Classe** : 4ème A
 
-### Emma Bernard
-
-- **Username** : `eleve_bernard`
-- **Email** : `emma.bernard@eleve.com`
-- **Mot de passe** : `eleve123`
-- **Matricule** : `2025-5-8652`
-- **Classe** : 3ème A
 
 ### [Élève sans nom]
 

@@ -241,3 +241,54 @@ class HistoriquePresence(models.Model):
 
     def __str__(self):
         return f"{self.eleve.user.get_full_name()} - {self.cours.matiere.nom} - {self.date} - {self.get_statut_display()}"
+
+class Feedback(models.Model):
+    TYPE_CHOICES = [
+        ('GENERAL', 'General Question'),
+        ('ABSENCE', 'Absence Justification'),
+        ('RETARD', 'Delay Explanation'),
+        ('COMPORTEMENT', 'Behavior Concern'),
+        ('ACADEMIQUE', 'Academic Question'),
+        ('TECHNIQUE', 'Technical Issue'),
+        ('AUTRE', 'Other')
+    ]
+    
+    STATUT_CHOICES = [
+        ('NOUVEAU', 'New'),
+        ('EN_COURS', 'In Progress'),
+        ('REPONDU', 'Answered'),
+        ('FERME', 'Closed')
+    ]
+    
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE)
+    eleve = models.ForeignKey(Eleve, on_delete=models.CASCADE, null=True, blank=True)
+    cours = models.ForeignKey(Cours, on_delete=models.CASCADE, null=True, blank=True)
+    type_feedback = models.CharField(max_length=20, choices=TYPE_CHOICES, default='GENERAL')
+    sujet = models.CharField(max_length=200)
+    message = models.TextField()
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='NOUVEAU')
+    priorite = models.CharField(max_length=10, choices=[
+        ('FAIBLE', 'Low'),
+        ('NORMALE', 'Normal'),
+        ('HAUTE', 'High'),
+        ('URGENTE', 'Urgent')
+    ], default='NORMALE')
+    
+    # Réponse de l'enseignant/administration
+    reponse = models.TextField(blank=True)
+    reponse_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='feedbacks_repondus')
+    date_reponse = models.DateTimeField(null=True, blank=True)
+    
+    # Métadonnées
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-date_creation']
+    
+    def __str__(self):
+        return f"Feedback #{self.id} - {self.parent.user.get_full_name()} - {self.sujet}"
+    
+    @property
+    def is_answered(self):
+        return self.statut == 'REPONDU' and self.reponse

@@ -29,9 +29,9 @@
     </a>
 </div>
 <div class="nav-item">
-    <a href="#" class="nav-link">
+    <a href="{% url 'feedback_list' %}" class="nav-link">
         <i class="fas fa-comments"></i>
-        Feedback (send/answer)
+        My Feedback
     </a>
 </div>
 <div class="nav-item">
@@ -54,7 +54,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-1">Parent Dashboard</h2>
-        <p class="text-muted mb-0">Tracking of {{ child_name|default:"your child" }}</p>
+        <p class="text-muted mb-0">Tracking of {{ premier_enfant.user.get_full_name|default:"your child" }}</p>
     </div>
     <div class="d-flex gap-2">
         <button class="btn btn-primary" onclick="sendFeedback()">
@@ -70,9 +70,19 @@
 <div class="child-overview mb-4">
     <div class="row align-items-center">
         <div class="col-md-8">
-            <h3 class="mb-2">{{ child_name|default:"Marie Dubois" }}</h3>
-            <p class="text-muted mb-0">{{ child_class|default:"4èmeA" }} - {{ child_school|default:"Collège FaceTrack"
-                }}</p>
+            {% if premier_enfant %}
+            <h3 class="mb-2">{{ premier_enfant.user.get_full_name }}</h3>
+            <p class="text-muted mb-0">{{ premier_enfant.classe.nom }} - Collège FaceTrack</p>
+            {% if enfants.count > 1 %}
+            <small class="text-info">
+                <i class="fas fa-info-circle me-1"></i>
+                You have {{ enfants.count }} children. Showing data for the first child.
+            </small>
+            {% endif %}
+            {% else %}
+            <h3 class="mb-2">No children found</h3>
+            <p class="text-muted mb-0">Please contact the administration</p>
+            {% endif %}
         </div>
         <div class="col-md-4 text-end">
             <div class="child-avatar">
@@ -91,7 +101,7 @@
                 <i class="fas fa-user-times"></i>
             </div>
         </div>
-        <div class="card-value">2</div>
+        <div class="card-value">{{ stats_enfant.absences|default:"0" }}</div>
         <div class="card-label">Days of absence</div>
     </div>
 
@@ -102,7 +112,7 @@
                 <i class="fas fa-clock"></i>
             </div>
         </div>
-        <div class="card-value">3</div>
+        <div class="card-value">{{ stats_enfant.retards|default:"0" }}</div>
         <div class="card-label">Delays this month</div>
     </div>
 
@@ -113,7 +123,7 @@
                 <i class="fas fa-percentage"></i>
             </div>
         </div>
-        <div class="card-value">97.8%</div>
+        <div class="card-value">{{ stats_enfant.taux_presence|default:"0" }}%</div>
         <div class="card-label">This month</div>
     </div>
 
@@ -124,7 +134,7 @@
                 <i class="fas fa-book"></i>
             </div>
         </div>
-        <div class="card-value">156</div>
+        <div class="card-value">{{ stats_enfant.total_cours|default:"0" }}</div>
         <div class="card-label">Course this month</div>
     </div>
 </div>
@@ -389,6 +399,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
     // Attendance chart
     document.addEventListener('DOMContentLoaded', function () {
@@ -434,13 +445,70 @@
     });
 
     function sendFeedback() {
-        showNotification('Ouverture du formulaire de feedback...', 'info');
-        // Implementation for feedback form
+        console.log('Opening feedback modal...');
+
+        // Load modal content via AJAX
+        fetch('{% url "feedback_modal" %}')
+            .then(response => {
+                console.log('Modal response received:', response);
+                return response.text();
+            })
+            .then(html => {
+                console.log('Modal HTML loaded');
+
+                // Remove existing modal if any
+                const existingModal = document.getElementById('feedbackModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+
+                // Add new modal to body
+                document.body.insertAdjacentHTML('beforeend', html);
+
+                // Wait a bit for the DOM to be updated
+                setTimeout(() => {
+                    // Show the modal
+                    const feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+                    feedbackModal.show();
+                    console.log('Modal shown');
+                }, 200);
+            })
+            .catch(error => {
+                console.error('Error loading feedback modal:', error);
+                showNotification('Error loading feedback form', 'error');
+            });
     }
 
     function downloadReport() {
         showNotification('Téléchargement du rapport en cours...', 'info');
         // Implementation for report download
+    }
+
+    // Function to show notification (if not already defined)
+    function showNotification(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' :
+            type === 'error' ? 'alert-danger' :
+                type === 'warning' ? 'alert-warning' : 'alert-info';
+        const icon = type === 'success' ? 'fa-check-circle' :
+            type === 'error' ? 'fa-exclamation-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            <i class="fas ${icon} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        document.body.appendChild(notification);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
     }
 </script>
 {% endblock %}

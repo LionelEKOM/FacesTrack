@@ -2,7 +2,7 @@
 from django.contrib import admin
 from .models import (
     User, Classe, Matiere, Parent, Enseignant, Eleve,
-    Cours, Presence, Notification
+    Cours, Presence, Notification, Feedback
 )
 from django.shortcuts import redirect
 
@@ -77,6 +77,38 @@ class PresenceAdmin(admin.ModelAdmin):
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ("id",)  # Ajoute d'autres champs si présents dans ton modèle
     search_fields = ()
+
+
+# ============================
+# FEEDBACK
+# ============================
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('id', 'parent', 'sujet', 'type_feedback', 'statut', 'priorite', 'date_creation')
+    list_filter = ('type_feedback', 'statut', 'priorite', 'date_creation')
+    search_fields = ('sujet', 'parent__user__first_name', 'parent__user__last_name', 'message')
+    readonly_fields = ('date_creation', 'date_modification')
+    list_editable = ('statut', 'priorite')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('parent', 'eleve', 'cours', 'type_feedback', 'sujet', 'message')
+        }),
+        ('Status & Priority', {
+            'fields': ('statut', 'priorite')
+        }),
+        ('Response', {
+            'fields': ('reponse', 'reponse_par', 'date_reponse'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('date_creation', 'date_modification'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('parent__user', 'eleve__user', 'cours__matiere', 'reponse_par')
 
 
 # Supprime ou adapte la vue suivante si inutile

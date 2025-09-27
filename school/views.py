@@ -15,8 +15,8 @@ import numpy as np
 import os
 from PIL import Image
 import base64
-from .forms import LoginForm
-from .models import User, Classe, Matiere, Eleve, Enseignant, Parent, Cours, SessionAppel, Presence, Notification, PhotoReference, HistoriquePresence
+from .forms import LoginForm, FeedbackForm
+from .models import User, Classe, Matiere, Eleve, Enseignant, Parent, Cours, SessionAppel, Presence, Notification, PhotoReference, HistoriquePresence, Feedback
 
 """
     This function is likely intended to display the classes taught by a teacher, and it requires the
@@ -453,27 +453,116 @@ def admin_stats(request):
 
 @login_required
 def admin_feedback(request):
-    """
-    This function likely handles feedback from administrators in a web application.
-    
-    :param request: The `request` parameter in the `admin_feedback` function likely refers to an HTTP
-    request object that contains information about the current request being made to the server. This
-    object typically includes details such as the request method, headers, user session data, and any
-    data sent in the request body. Developers often
-    """
-    """Parents' view"""
+    """Vue pour gérer les feedbacks des parents"""
     if not hasattr(request.user, 'role') or request.user.role.upper() != 'ADMIN':
         messages.error(request, "Accès non autorisé")
         return redirect('login')
     
+    # Récupérer tous les feedbacks avec les relations
+    feedbacks = Feedback.objects.select_related(
+        'parent__user', 
+        'eleve__user', 
+        'cours__matiere', 
+        'cours__classe',
+        'reponse_par'
+    ).order_by('-date_creation')
+    
+    # Filtres
+    statut_filter = request.GET.get('statut', '')
+    type_filter = request.GET.get('type', '')
+    priorite_filter = request.GET.get('priorite', '')
+    search_query = request.GET.get('search', '')
+    
+    if statut_filter:
+        feedbacks = feedbacks.filter(statut=statut_filter)
+    if type_filter:
+        feedbacks = feedbacks.filter(type_feedback=type_filter)
+    if priorite_filter:
+        feedbacks = feedbacks.filter(priorite=priorite_filter)
+    if search_query:
+        feedbacks = feedbacks.filter(
+            Q(sujet__icontains=search_query) |
+            Q(message__icontains=search_query) |
+            Q(parent__user__first_name__icontains=search_query) |
+            Q(parent__user__last_name__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(feedbacks, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistiques
+    total_feedbacks = Feedback.objects.count()
+    nouveaux_feedbacks = Feedback.objects.filter(statut='NOUVEAU').count()
+    en_cours_feedbacks = Feedback.objects.filter(statut='EN_COURS').count()
+    repondus_feedbacks = Feedback.objects.filter(statut='REPONDU').count()
+    
     context = {
         'user': request.user,
-        'feedbacks': [
-            {'id': 1, 'parent': 'Parent de Marie Dubois', 'student': 'Marie Dubois', 'class': '4èmeA', 'message': 'Très satisfait du suivi', 'rating': 5, 'date': '2024-01-15'},
-            {'id': 2, 'parent': 'Parent de Thomas Martin', 'student': 'Thomas Martin', 'class': '6èmeB', 'message': 'Bon travail des enseignants', 'rating': 4, 'date': '2024-01-14'},
-        ]
+        'page_obj': page_obj,
+        'feedbacks': page_obj,
+        'total_feedbacks': total_feedbacks,
+        'nouveaux_feedbacks': nouveaux_feedbacks,
+        'en_cours_feedbacks': en_cours_feedbacks,
+        'repondus_feedbacks': repondus_feedbacks,
+        'statut_filter': statut_filter,
+        'type_filter': type_filter,
+        'priorite_filter': priorite_filter,
+        'search_query': search_query,
+        'statut_choices': Feedback.STATUT_CHOICES,
+        'type_choices': Feedback.TYPE_CHOICES,
+        'priorite_choices': Feedback.PRIORITE_CHOICES,
     }
     return render(request, 'admin_feedback.html', context)
+
+@login_required
+def admin_feedback_detail(request, feedback_id):
+    """Vue pour voir et répondre à un feedback spécifique"""
+    if not hasattr(request.user, 'role') or request.user.role.upper() != 'ADMIN':
+        messages.error(request, "Accès non autorisé")
+        return redirect('login')
+    
+    try:
+        feedback = get_object_or_404(Feedback, id=feedback_id)
+    except Feedback.DoesNotExist:
+        messages.error(request, "Feedback non trouvé")
+        return redirect('admin_feedback')
+    
+    if request.method == 'POST':
+        # Mettre à jour le feedback
+        action = request.POST.get('action')
+        
+        if action == 'update_status':
+            new_statut = request.POST.get('statut')
+            new_priorite = request.POST.get('priorite')
+            
+            feedback.statut = new_statut
+            feedback.priorite = new_priorite
+            feedback.save()
+            
+            messages.success(request, f'Statut mis à jour: {feedback.get_statut_display()}')
+            
+        elif action == 'respond':
+            reponse = request.POST.get('reponse', '').strip()
+            if reponse:
+                feedback.reponse = reponse
+                feedback.reponse_par = request.user
+                feedback.date_reponse = timezone.now()
+                feedback.statut = 'REPONDU'
+                feedback.save()
+                
+                messages.success(request, 'Réponse envoyée avec succès')
+            else:
+                messages.error(request, 'Veuillez saisir une réponse')
+        
+        return redirect('admin_feedback_detail', feedback_id=feedback_id)
+    
+    context = {
+        'feedback': feedback,
+        'user': request.user,
+    }
+    return render(request, 'admin_feedback_detail.html', context)
 
 @login_required
 def admin_notifications(request):
@@ -1248,7 +1337,10 @@ def parent_dashboard(request):
         parent = Parent.objects.get(user=request.user)
         
         # Enfants du parent
-        enfants = Eleve.objects.filter(parent=parent)
+        enfants = Eleve.objects.filter(parent=parent).select_related('classe', 'user')
+        
+        # Récupérer le premier enfant pour l'affichage principal (ou le seul enfant)
+        premier_enfant = enfants.first() if enfants.exists() else None
         
         # Présences des enfants du mois
         debut_mois = timezone.now().replace(day=1)
@@ -1257,10 +1349,44 @@ def parent_dashboard(request):
             session_appel__cours__date__gte=debut_mois
         ).order_by('-session_appel__cours__date')
         
+        # Calculer les statistiques pour le premier enfant
+        stats_enfant = {}
+        if premier_enfant:
+            # Absences du mois
+            absences_mois = presences_enfants.filter(
+                eleve=premier_enfant,
+                statut='ABSENT'
+            ).count()
+            
+            # Retards du mois
+            retards_mois = presences_enfants.filter(
+                eleve=premier_enfant,
+                statut='RETARD'
+            ).count()
+            
+            # Taux de présence
+            total_cours_mois = presences_enfants.filter(eleve=premier_enfant).count()
+            presences_mois = presences_enfants.filter(
+                eleve=premier_enfant,
+                statut='PRESENT'
+            ).count()
+            
+            taux_presence = (presences_mois / total_cours_mois * 100) if total_cours_mois > 0 else 0
+            
+            stats_enfant = {
+                'absences': absences_mois,
+                'retards': retards_mois,
+                'taux_presence': round(taux_presence, 1),
+                'total_cours': total_cours_mois
+            }
+        
         context = {
             'parent': parent,
             'enfants': enfants,
+            'premier_enfant': premier_enfant,
             'presences_enfants': presences_enfants,
+            'stats_enfant': stats_enfant,
+            'current_month': timezone.now().strftime('%B %Y'),
         }
         
         return render(request, 'dashboard_parent.html', context)
@@ -2541,3 +2667,98 @@ def api_finish_call(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+# Feedback views
+@login_required
+def feedback_create(request):
+    """Vue pour créer un nouveau feedback"""
+    if request.user.role != 'PARENT':
+        return redirect('login')
+    
+    try:
+        parent = Parent.objects.get(user=request.user)
+    except Parent.DoesNotExist:
+        messages.error(request, 'Profil parent non trouvé.')
+        return redirect('login')
+    
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST, parent=parent)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.parent = parent
+            feedback.save()
+            
+            # Return success modal instead of JSON
+            return render(request, 'feedback/success_modal.html', {
+                'feedback': feedback
+            })
+        else:
+            # Return form with errors
+            return render(request, 'feedback/modal_content.html', {
+                'form': form,
+                'parent': parent,
+                'errors': form.errors
+            })
+    else:
+        form = FeedbackForm(parent=parent)
+    
+    return render(request, 'feedback/modal_feedback.html', {
+        'form': form,
+        'parent': parent
+    })
+
+@login_required
+def feedback_modal(request):
+    """Vue pour récupérer le modal de feedback via AJAX"""
+    if request.user.role != 'PARENT':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    try:
+        parent = Parent.objects.get(user=request.user)
+        form = FeedbackForm(parent=parent)
+        
+        return render(request, 'feedback/modal_content.html', {
+            'form': form,
+            'parent': parent
+        })
+        
+    except Parent.DoesNotExist:
+        return JsonResponse({'error': 'Parent profile not found'}, status=404)
+
+@login_required
+def feedback_list(request):
+    """Vue pour lister les feedbacks du parent"""
+    if request.user.role != 'PARENT':
+        return redirect('login')
+    
+    try:
+        parent = Parent.objects.get(user=request.user)
+        feedbacks = Feedback.objects.filter(parent=parent).order_by('-date_creation')
+        
+        return render(request, 'feedback/feedback_list.html', {
+            'feedbacks': feedbacks,
+            'parent': parent
+        })
+        
+    except Parent.DoesNotExist:
+        messages.error(request, 'Profil parent non trouvé.')
+        return redirect('login')
+
+@login_required
+def feedback_detail(request, feedback_id):
+    """Vue pour voir les détails d'un feedback"""
+    if request.user.role != 'PARENT':
+        return redirect('login')
+    
+    try:
+        parent = Parent.objects.get(user=request.user)
+        feedback = get_object_or_404(Feedback, id=feedback_id, parent=parent)
+        
+        return render(request, 'feedback/feedback_detail.html', {
+            'feedback': feedback,
+            'parent': parent
+        })
+        
+    except Parent.DoesNotExist:
+        messages.error(request, 'Profil parent non trouvé.')
+        return redirect('login')

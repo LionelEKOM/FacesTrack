@@ -1,0 +1,246 @@
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="feedbackModalLabel">
+                    <i class="fas fa-comment me-2"></i>Send Feedback
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="feedbackForm" method="post" action="{% url 'feedback_create' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.type_feedback.id_for_label }}" class="form-label">
+                                {{ form.type_feedback.label }}
+                            </label>
+                            {{ form.type_feedback }}
+                            {% if form.type_feedback.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.type_feedback.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.priorite.id_for_label }}" class="form-label">
+                                {{ form.priorite.label }}
+                            </label>
+                            {{ form.priorite }}
+                            {% if form.priorite.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.priorite.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.eleve.id_for_label }}" class="form-label">
+                                {{ form.eleve.label }}
+                            </label>
+                            {{ form.eleve }}
+                            {% if form.eleve.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.eleve.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.cours.id_for_label }}" class="form-label">
+                                {{ form.cours.label }}
+                            </label>
+                            {{ form.cours }}
+                            {% if form.cours.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.cours.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.sujet.id_for_label }}" class="form-label">
+                            {{ form.sujet.label }}
+                        </label>
+                        {{ form.sujet }}
+                        {% if form.sujet.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.sujet.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.message.id_for_label }}" class="form-label">
+                            {{ form.message.label }}
+                        </label>
+                        {{ form.message }}
+                        {% if form.message.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.message.errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Help text -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Tips for effective feedback:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Be specific about your concern or question</li>
+                            <li>Include relevant dates or course information if applicable</li>
+                            <li>Choose the appropriate priority level</li>
+                            <li>We'll respond within 24-48 hours</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitFeedback">
+                        <i class="fas fa-paper-plane me-2"></i>Send Feedback
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="feedbackLoading" class="d-none">
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+        style="background: rgba(0,0,0,0.5); z-index: 9999;">
+        <div class="text-center text-white">
+            <div class="spinner-border mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div>Sending your feedback...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const feedbackForm = document.getElementById('feedbackForm');
+        const feedbackModal = document.getElementById('feedbackModal');
+        const submitBtn = document.getElementById('submitFeedback');
+        const loadingOverlay = document.getElementById('feedbackLoading');
+
+        // Handle form submission
+        feedbackForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+            loadingOverlay.classList.remove('d-none');
+
+            // Submit form via AJAX
+            fetch(feedbackForm.action, {
+                method: 'POST',
+                body: new FormData(feedbackForm),
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Success
+                        showNotification(data.message, 'success');
+                        feedbackModal.querySelector('.btn-close').click(); // Close modal
+                        feedbackForm.reset(); // Reset form
+
+                        // Update feedback list if visible
+                        if (typeof updateFeedbackList === 'function') {
+                            updateFeedbackList();
+                        }
+                    } else {
+                        // Error
+                        showNotification(data.message || 'An error occurred', 'error');
+
+                        // Display form errors
+                        if (data.errors) {
+                            displayFormErrors(data.errors);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('An error occurred while sending feedback', 'error');
+                })
+                .finally(() => {
+                    // Hide loading
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Feedback';
+                    loadingOverlay.classList.add('d-none');
+                });
+        });
+
+        // Clear form when modal is closed
+        feedbackModal.addEventListener('hidden.bs.modal', function () {
+            feedbackForm.reset();
+            clearFormErrors();
+        });
+
+        // Function to display form errors
+        function displayFormErrors(errors) {
+            clearFormErrors();
+
+            Object.keys(errors).forEach(field => {
+                const fieldElement = document.querySelector(`[name="${field}"]`);
+                if (fieldElement) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-danger small mt-1';
+                    errorDiv.innerHTML = errors[field].join('<br>');
+                    fieldElement.parentNode.appendChild(errorDiv);
+                }
+            });
+        }
+
+        // Function to clear form errors
+        function clearFormErrors() {
+            const errorDivs = feedbackForm.querySelectorAll('.text-danger.small.mt-1');
+            errorDivs.forEach(div => div.remove());
+        }
+
+        // Function to show notification
+        function showNotification(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+            const notification = document.createElement('div');
+            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+            <i class="fas ${icon} me-2"></i>${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+            document.body.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+    });
+</script>
