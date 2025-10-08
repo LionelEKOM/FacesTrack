@@ -24,21 +24,22 @@ class User(AbstractUser):
 
 class Classe(models.Model):
     CLASSE_CHOICES = [
-        ('6A', '6th A'), ('6B', '6th B'),
-        ('5A', '5th A'), ('5B', '5th B'),
-        ('4A', '4th A'), ('4B', '4th B'),
-        ('3A', '3rd A'), ('3B', '3rd B'),
-        ('2ND', '10th'),
-        ('1ERE', '11th'),
-        ('TLE', '12th'),
+        ('Form1_A', 'Form 1A'), ('Form1_B', 'Form 1B'),
+        ('Form2_A', 'Form 2A'), ('Form2_B', 'Form 2A'),
+        ('Form3_A', 'Form 3A'), ('Form3_B', 'Form 3B'),
+        ('Form4_A', '3rd A'), ('Form4_B', 'Form 4B'),
+        ('Form5_A', 'Form 5A'),
+        ('Lower_Sixth', 'Lower Sixth'),
+        ('Upper_Sixth', 'Upper_Sixth'),
     ]
 
     CYCLE_CHOICES = [
-        ('PREMIER', 'First cycle (6th → 3rd)'),
-        ('SECOND', 'Second cycle (10th → 12th)'),
+        #('PREMIER', 'First cycle (6th → 3rd)'),
+        ('PREMIER', 'First cycle (Form 1 → Form 5)'),
+        ('SECOND', 'Second cycle (Lower → Upper)'),
     ]
 
-    nom = models.CharField(max_length=10, choices=CLASSE_CHOICES)
+    nom = models.CharField(max_length=20, choices=CLASSE_CHOICES)
     cycle = models.CharField(max_length=10, choices=CYCLE_CHOICES, default='PREMIER')  # 👈 default ajouté
     annee_scolaire = models.CharField(max_length=9, null=True, blank=True)  # ex: "2023-2024"
     capacite = models.IntegerField(default=30)
